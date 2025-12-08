@@ -2,6 +2,7 @@
 #include <time.h>
 #include <mutex>
 #include "CardGameState.h"
+#include "ThreadPool.h"
 
 #ifdef __MWERKS__
 #include "Diagnostics.h"
@@ -1050,36 +1051,8 @@ void iiCardState::getCards(uint64_t val, std::vector<card> &theCards, int availa
 
 uint64_t iiCardState::choose(int n, int k)
 {
-	static std::vector<std::vector<uint64_t> > lookups;
-	static std::mutex lookups_mutex;
-
-	if (k > n)
-        return 0;
-	
-//    if (k > n/2)
-//        k = n-k; // Take advantage of symmetry
-
-	std::lock_guard<std::mutex> lock(lookups_mutex);
-	if (n >= (int)lookups.size())
-		lookups.resize(n+1);
-	if (k >= (int)lookups[n].size())
-		lookups[n].resize(k+1);
-	if (lookups[n][k] != 0)
-		return lookups[n][k];
-
-	//printf("%d choose %d\n", n, k);
-	
-    long double accum = 1;
-    for (int i = 1; i <= k; i++)
-		accum = accum * (n-k+i) / i;
-	
-    lookups[n][k] = (uint64_t)(accum+0.5);
-	return accum + 0.5; // avoid rounding error
-	
-//	uint64_t ans=1;
-//	for (int x = 0; x < m; x++)
-//		ans=(ans*(n-x))/(x+1);
-//	return ans;
+	// Use pre-computed lookup table for thread-safe, lock-free access
+	return BinomialLookup::getInstance().choose(n, k);
 }
 
 

@@ -1,8 +1,10 @@
 #include "Player.h"
 #include "iiMonteCarlo.h"
+#include "ThreadPool.h"
 
 #include <deque>
 #include <algorithm>
+#include <future>
 #ifdef _WIN32
 #include <thread>
 #include <mutex>
@@ -60,7 +62,8 @@ iiMonteCarlo::~iiMonteCarlo()
 
 const char *iiMonteCarlo::getName()
 {
-	static char name[1024];
+	// Use thread_local to avoid race conditions in multi-threaded code
+	thread_local char name[1024];
 	if (algorithm)
 		sprintf(name, "MC_D-%s_M-%d__%s", getDecisionName(), numModels, algorithm->getName());
 	else
@@ -168,27 +171,23 @@ void iiMonteCarlo::doModels(GameState *g, Player *p, std::vector<returnValue *> 
 //pthread_mutex_lock(&mutex);
 //pthread_mutex_unlock(&mutex);
 
+// Result structure for completion queue
+struct ModelResult {
+	int index;
+	returnValue* result;
+};
 
 #ifdef _WIN32
-// Windows: C++11 threading implementation
+// Windows: Thread pool implementation with completion queue for optimal performance
 void iiMonteCarlo::doThreadedModels(GameState *g, Player *p, std::vector<returnValue*> &v, std::vector<double> &probs)
 {
 	iiGameState *iiState;
-	Algorithm **algs;
-	threadModel **tm;
-	GameState **gameStates;
-	returnValue **results;
-	std::thread *threads;
-	threads = new std::thread[numModels];
+	std::vector<Algorithm*> algs(numModels);
+	std::vector<GameState*> gameStates(numModels);
 
 	v.resize(numModels);
-	results = new returnValue*[numModels];
-	algs = new Algorithm *[numModels];
-	tm = new threadModel *[numModels];
-	gameStates = new GameState *[numModels];
-	std::vector<int> modelQ;
 	for (int x = 0; x < numModels; x++)
-		modelQ.push_back(x);
+		v[x] = 0;
 
 	iiState = g->getiiGameState(true, g->getPlayerNum(p), player);
 
@@ -198,109 +197,71 @@ void iiMonteCarlo::doThreadedModels(GameState *g, Player *p, std::vector<returnV
 		exit(0);
 	}
 
+	// Prepare game states and algorithms
 	double probSum = 0;
 	for (int x = 0; x < numModels; x++)
 	{
-		v[x] = 0;
-		results[x] = 0;
 		double prob;
 		gameStates[x] = iiState->getGameState(prob);
 		probs.push_back(prob);
 		probSum += prob;
 		algs[x] = algorithm->clone();
 		algs[x]->resetCounters(gameStates[x]);
-		tm[x] = new threadModel();
-
-		tm[x]->alg = algs[x];
-		tm[x]->gs = gameStates[x];
 	}
 	for (int x = 0; x < numModels; x++)
-		probs[x]/=probSum;
+		probs[x] /= probSum;
 
-	// Use available CPUs for parallel execution
-	// Each cloned Algorithm now has unique random seed for thread-safety
-	int numCPU = std::thread::hardware_concurrency(); // Limited to 2 due to thread-safety issues
-	if (numCPU < 1) numCPU = 1;
+	// Use thread pool with completion queue for results
+	// Results are collected as they complete (not in submission order)
+	CompletionQueue<ModelResult> completionQueue;
+	ThreadPool& pool = ThreadPool::getInstance();
 
-	int numRunning = 0;
-	std::deque<int> running;
-	while ((modelQ.size() > 0) || (numRunning > 0))
+	// Submit all tasks to thread pool
+	for (int x = 0; x < numModels; x++)
 	{
-		while ((numRunning < numCPU) && (modelQ.size() > 0))
-		{
-			int next = modelQ.back();
-			modelQ.pop_back();
-			running.push_back(next);
-			numRunning++;
-#if _PRINT_
-			printf("Starting up %d, %d now running\n", next, numRunning);
-#endif
+		Algorithm* alg = algs[x];
+		GameState* gs = gameStates[x];
+		int idx = x;
 
-			// Launch thread with lambda to capture result
-			threadModel *m = tm[next];
-			returnValue **resPtr = &results[next];
-			threads[next] = std::thread([m, resPtr]() {
-				returnValue *val = m->alg->Analyze(m->gs, m->gs->getNextPlayer());
-				*resPtr = val;
-			});
-		}
-
-		int waitFor = running.front();
-		running.pop_front();
-		threads[waitFor].join();
-		v[waitFor] = results[waitFor];
-#if _PRINT_
-		printf("Got result from %d\n", waitFor);
-		v[waitFor]->Print();
-#endif
-		numRunning--;
+		pool.submit([&completionQueue, alg, gs, idx]() {
+			returnValue* val = alg->Analyze(gs, gs->getNextPlayer());
+			completionQueue.push(ModelResult{idx, val});
+		});
 	}
+
+	// Collect results as they complete (optimal - no waiting for slow tasks)
+	for (int completed = 0; completed < numModels; completed++)
+	{
+		ModelResult result = completionQueue.pop();
+		v[result.index] = result.result;
+#if _PRINT_
+		printf("Got result from %d\n", result.index);
+		if (v[result.index]) v[result.index]->Print();
+#endif
+	}
+
+	// Cleanup
 	for (int x = 0; x < numModels; x++)
 	{
 		delete algs[x];
-		algs[x] = 0;
-		delete tm[x];
-		tm[x] = 0;
 		delete gameStates[x];
-		gameStates[x] = 0;
 	}
-	delete [] tm;
-	delete [] algs;
-	delete [] gameStates;
-	delete [] results;
-	delete [] threads;
 	delete iiState;
 }
 
 void *doThreadedModel(void *data) { return nullptr; }
 #else
-// Unix/Mac implementation using pthreads
+// Unix/Mac: Thread pool implementation with completion queue for optimal performance
 void iiMonteCarlo::doThreadedModels(GameState *g, Player *p, std::vector<returnValue*> &v, std::vector<double> &probs)
 {
 	iiGameState *iiState;
-	Algorithm **algs;
-	threadModel **tm;
-	//returnValue **v;
-	GameState **gameStates;
-#ifndef __MAC__
-	pthread_t *threads;
-	threads = new pthread_t[numModels];
-#else
-	MPQueueID returnQ;
-	MPTaskID *threads;
-	threads = new MPTaskID[numModels];
-	MPCreateQueue(&returnQ);
-#endif
-	
+	std::vector<Algorithm*> algs(numModels);
+	std::vector<GameState*> gameStates(numModels);
+
 	v.resize(numModels);
-	//v = new returnValue *[numModels];
-	algs = new Algorithm *[numModels];
-	tm = new threadModel *[numModels];
-	gameStates = new GameState *[numModels];
-	std::vector<int> modelQ;
 	for (int x = 0; x < numModels; x++)
-		modelQ.push_back(x);
-	
+		v[x] = 0;
+
 	iiState = g->getiiGameState(true, g->getPlayerNum(p), player);
 
 	if (!algorithm)
@@ -308,99 +269,57 @@ void iiMonteCarlo::doThreadedModels(GameState *g, Player *p, std::vector<returnV
 		fprintf(stderr, "Error, algorithm is null, can't do models!\n");
 		exit(0);
 	}
-	
+
+	// Prepare game states and algorithms
 	double probSum = 0;
 	for (int x = 0; x < numModels; x++)
 	{
-		threads[x] = 0;
-		v[x] = 0;
 		double prob;
 		gameStates[x] = iiState->getGameState(prob);
 		probs.push_back(prob);
 		probSum += prob;
 		algs[x] = algorithm->clone();
 		algs[x]->resetCounters(gameStates[x]);
-		tm[x] = new threadModel();
-
-		tm[x]->alg = algs[x];
-		tm[x]->gs = gameStates[x];
-		//tm[x]->v = &v[x];
-#ifdef __MAC__
-		tm[x]->returnQ = returnQ;
-#endif
 	}
 	for (int x = 0; x < numModels; x++)
-		probs[x]/=probSum;
-	
-	int numCPU = std::thread::hardware_concurrency();
-#ifdef __APPLE__
-//	numCPU = MPProcessors();
-#endif
-	int numRunning = 0;
-	std::deque<int> running;
-	while ((modelQ.size() > 0) || (numRunning > 0))
-	{
-		while ((numRunning < numCPU) && (modelQ.size() > 0))
-		{
-			int next = modelQ.back();
-			modelQ.pop_back();
-			running.push_back(next);
-			numRunning++;
-#if _PRINT_
-			printf("Starting up %d, %d now running\n", next, numRunning);
-#endif
-			
-#ifndef __MAC__
-			pthread_create(&threads[next], NULL, doThreadedModel, (void**)tm[next]);
-#else
-			MPCreateTask(doThreadedModel, (void*)tm[next], 512*1024, 0, NULL, NULL, 0, &threads[next]); 
-#endif
-		}
+		probs[x] /= probSum;
 
-		int res;
-		int waitFor = running.front();
-		running.pop_front();
-#ifndef __MAC__
-		res = pthread_join(threads[waitFor], (void **)&v[waitFor]);
-#else
-		res = MPWaitOnQueue(returnQ, (void **)&v[waitFor], 0, 0, kDurationForever);
-		if (v[waitFor] == 0)
-		{ printf("Got NIL return\n");  }
-#endif
-#if _PRINT_
-		printf("Got result from %d\n", waitFor);
-		v[waitFor]->Print();
-#endif
-		numRunning--;
-		if (res != 0)
-		{
-			printf("Error %d joining with %d\n", res, waitFor);
-			exit(1);
-		}
-	}
+	// Use thread pool with completion queue for results
+	// Results are collected as they complete (not in submission order)
+	CompletionQueue<ModelResult> completionQueue;
+	ThreadPool& pool = ThreadPool::getInstance();
+
+	// Submit all tasks to thread pool
 	for (int x = 0; x < numModels; x++)
 	{
-		//printf("deleting alg %d: %p\n", x, algs[x]);	fflush(stdout);
+		Algorithm* alg = algs[x];
+		GameState* gs = gameStates[x];
+		int idx = x;
+
+		pool.submit([&completionQueue, alg, gs, idx]() {
+			returnValue* val = alg->Analyze(gs, gs->getNextPlayer());
+			completionQueue.push(ModelResult{idx, val});
+		});
+	}
+
+	// Collect results as they complete (optimal - no waiting for slow tasks)
+	for (int completed = 0; completed < numModels; completed++)
+	{
+		ModelResult result = completionQueue.pop();
+		v[result.index] = result.result;
+#if _PRINT_
+		printf("Got result from %d\n", result.index);
+		if (v[result.index]) v[result.index]->Print();
+#endif
+	}
+
+	// Cleanup
+	for (int x = 0; x < numModels; x++)
+	{
 		delete algs[x];
-		algs[x] = 0;
-		//printf("deleting tm %d\n", x);	fflush(stdout);
-		delete tm[x];
-		tm[x] = 0;
-		//printf("deleting gamestate players\n");	fflush(stdout);
-		//gameStates[x]->deletePlayers();
-		//printf("deleting gamestate %d\n", x);	fflush(stdout);
 		delete gameStates[x];
-		gameStates[x] = 0;
 	}
-#ifdef __MAC__
-	MPDeleteQueue(returnQ);
-#endif
-	delete [] tm;
-	delete [] algs;
-	delete [] gameStates;
-	delete [] threads;
 	delete iiState;
-	//return v;
 }
 
 #ifdef __MAC__
@@ -409,9 +328,10 @@ OSStatus doThreadedModel(void *data)
 void *doThreadedModel(void *data)
 #endif
 {
+	// Legacy function - kept for backwards compatibility but no longer used
+	// Thread pool now handles all threading
 	threadModel *m = (threadModel *)data;
 	returnValue *val = m->alg->Analyze(m->gs, m->gs->getNextPlayer());
-	//printf("Writing to: %p (%p)\n", (m->v), m);
 #ifndef __MAC__
 	pthread_exit((void *)val);
 	return 0;

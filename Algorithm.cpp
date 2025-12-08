@@ -389,12 +389,19 @@ int Algorithm::setupNextIteration(GameState *g, Player *p)
 
 void Algorithm::logNodes()
 {
+	// Skip file logging when running in threaded mode to avoid I/O contention
+	// The useTHREADS flag is already checked in setupNextIteration before calling this
+	// Additional guard for safety in case called from elsewhere
+	if (useTHREADS) {
+		return;
+	}
+
 	FILE *t = fopen("nodes.out", "a+");
 	if (t)
 	{
 		fprintf(t, "%s\t%d\t%ld\n", getName(), iterDepth, nodesExpanded);
 		fclose(t);
-	}	
+	}
 }
 
 int Algorithm::getIterationSearchLimit()

@@ -8,6 +8,7 @@
  */
 
 #include "HeartsGameHistories.h"
+#include <string>
 
 namespace hearts {
 
@@ -367,11 +368,12 @@ void GameHistories::SetGameUploaded(int which)
 
 const char *GameHistories::GetUserRandomName()
 {
-	static char name[32];
-	char path[1024];	
+	// Use thread_local to avoid race conditions in multi-threaded code
+	thread_local char name[32];
+	char path[1024];
 	sprintf(path, "%s/xinxin/%s.keyname", savePath, userName);
 	FILE *f = fopen(path, "r");
-	if (!f) 
+	if (!f)
 	{
 		name[0] = 0;
 		return 0;
@@ -383,13 +385,14 @@ const char *GameHistories::GetUserRandomName()
 
 const char *GameHistories::GetHistoryString(int whichGame)
 {
-	static std::string str;
+	// Use thread_local to avoid race conditions in multi-threaded code
+	thread_local std::string str;
 	str.clear();
 	GetGame(whichGame).getString(str);
 //	printf("Data1\n-----\n");
 //	printf(str.c_str());
 //	printf("\n-----\n");
-	
+
 	return str.c_str();
 }
 

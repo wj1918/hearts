@@ -4,6 +4,10 @@
 #include "iiMonteCarlo.h"
 #include "statistics.h"
 
+#include <cassert>
+#include <cstdlib>
+#include <ctime>
+
 using namespace hearts;
 
 Player *GetPlayer(int playerType)
@@ -70,9 +74,9 @@ Player *GetPlayer(int playerType)
 
 void PlayGame(statistics &s)
 {
-	srandom(time(NULL));
+	srand(static_cast<unsigned int>(time(NULL)));
 	HeartsGameState *g;
-	g = new HeartsGameState(random());
+	g = new HeartsGameState(rand());
 	HeartsCardGame game(g);
 	//game.setMaxPoints(1);
 	int order[14][4] =
@@ -113,7 +117,7 @@ void PlayGame(statistics &s)
 
 	g->setRules(rules);
 
-	int org = random()%14;
+	int org = rand()%14;
 	for (int x = 0; x < 4; x++)
 	{
 		int player = order[org][x];

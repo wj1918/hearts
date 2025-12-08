@@ -27,6 +27,8 @@
 #include "Timer.h"
 #include <stdint.h>
 #include <cstring>
+#include <atomic>
+#include <mutex>
 
 namespace hearts {
 
@@ -51,16 +53,26 @@ void Timer::StartTimer()
 
 #ifdef linux
 
+// Thread-safe CPU speed caching
+static std::atomic<float> g_cpuSpeedCache{-1.0f};
+static std::mutex g_cpuSpeedMutex;
+
 float Timer::getCPUSpeed()
 {
-	FILE *f;
+	// Fast path: check if already cached
+	float cached = g_cpuSpeedCache.load(std::memory_order_acquire);
+	if (cached >= 0.0f)
+		return cached;
 
-	static float answer = -1;
+	// Slow path: compute and cache (with mutex to prevent redundant reads)
+	std::lock_guard<std::mutex> lock(g_cpuSpeedMutex);
 
-	if (answer != -1)
-		return answer;
+	// Double-check after acquiring lock
+	cached = g_cpuSpeedCache.load(std::memory_order_relaxed);
+	if (cached >= 0.0f)
+		return cached;
 
-	f = fopen("/proc/cpuinfo", "r");
+	FILE *f = fopen("/proc/cpuinfo", "r");
 	if (f)
 	{
 		while (!feof(f))
@@ -70,17 +82,18 @@ float Timer::getCPUSpeed()
 			fgets(entry, 1024, f);
 			if (strstr(entry, "cpu MHz"))
 			{
-				//                              cpu MHz         : 997.399
-				float answer;
-				sscanf(entry, "%[^0-9:] : %f", temp, &answer);
-				//printf("Read CPU speed: %1.2f\n", answer);
+				float speed;
+				sscanf(entry, "%[^0-9:] : %f", temp, &speed);
 				fclose(f);
-				return answer;
+				g_cpuSpeedCache.store(speed, std::memory_order_release);
+				return speed;
 			}
 		}
 		fclose(f);
 	}
-	return 0;
+
+	g_cpuSpeedCache.store(0.0f, std::memory_order_release);
+	return 0.0f;
 }
 
 #endif

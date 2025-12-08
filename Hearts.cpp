@@ -2,6 +2,7 @@
 //#include "mathUtil.h"
 #include "fpUtil.h"
 #include "HeartsGameHistories.h"
+#include <atomic>
 
 namespace hearts {
 
@@ -89,13 +90,15 @@ int HeartsCardGame::Play()
 
 void HeartsCardGame::doOnePlay()
 {
-	static int numplays = 0;
+	// Thread-safe play counter using atomic operations
+	static std::atomic<int> numplays{0};
 
-	if ((numplays%numPlayers == 0) && (numplays != 0) && (numplays%52 != 0))
+	int current = numplays.load(std::memory_order_relaxed);
+	if ((current % numPlayers == 0) && (current != 0) && (current % 52 != 0))
 		((HeartsGameState*)theGame)->waitEndTrick();
 	CardGame::doOnePlay();
-	numplays++;
-	if (numplays%52 == 0)
+	int newVal = numplays.fetch_add(1, std::memory_order_relaxed) + 1;
+	if (newVal % 52 == 0)
 		((HeartsGameState*)theGame)->waitEndTrick();
 }
 
@@ -1158,7 +1161,8 @@ SimpleHeartsPlayer::SimpleHeartsPlayer(Algorithm *alg)
 
 const char *SimpleHeartsPlayer::getName()
 {
-	static char name[255];
+	// Use thread_local to avoid race conditions in multi-threaded code
+	thread_local char name[255];
 	iiGameState *igs = getiiModel();
 	sprintf(name, "Simple(%s,%s)", igs->GetName(), algorithm->getName());
 	delete igs;
@@ -1582,7 +1586,8 @@ Player *GlobalHeartsPlayer::clone() const
 
 const char *GlobalHeartsPlayer::getName()
 {
-	static char name[255];
+	// Use thread_local to avoid race conditions in multi-threaded code
+	thread_local char name[255];
 	iiGameState *igs = getiiModel();
 	sprintf(name, "GlobalHearts(%s,%s)", igs->GetName(), algorithm->getName());
 	delete igs;
@@ -1626,7 +1631,8 @@ double GlobalHeartsPlayer2::cutoffEval(unsigned int who)
 
 const char *GlobalHeartsPlayer2::getName()
 {
-	static char name[255];
+	// Use thread_local to avoid race conditions in multi-threaded code
+	thread_local char name[255];
 	iiGameState *igs = getiiModel();
 	sprintf(name, "GlobalHearts2(%s,%s)", igs->GetName(), algorithm->getName());
 	delete igs;
@@ -1662,7 +1668,8 @@ double GlobalHeartsPlayer3::cutoffEval(unsigned int who)
 
 const char *GlobalHeartsPlayer3::getName()
 {
-	static char name[255];
+	// Use thread_local to avoid race conditions in multi-threaded code
+	thread_local char name[255];
 	iiGameState *igs = getiiModel();
 	sprintf(name, "GlobalHearts3(%s,%s)", igs->GetName(), algorithm->getName());
 	delete igs;
@@ -1701,7 +1708,8 @@ Player *SafeSimpleHeartsPlayer::clone() const
 
 const char *SafeSimpleHeartsPlayer::getName()
 {
-	static char name[255];
+	// Use thread_local to avoid race conditions in multi-threaded code
+	thread_local char name[255];
 	iiGameState *igs = getiiModel();
 	sprintf(name, "SafeSimple(0.90,%s,%s)", igs->GetName(), algorithm->getName());
 	delete igs;
