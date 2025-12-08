@@ -2,7 +2,14 @@
 #include "iiMonteCarlo.h"
 
 #include <deque>
+#include <algorithm>
+#ifdef _WIN32
+#include <thread>
+#include <mutex>
+#include <vector>
+#else
 #include <pthread.h>
+#endif
 #ifndef __MAC__
 #else
 #include <CoreServices/CoreServices.h>
@@ -161,6 +168,113 @@ void iiMonteCarlo::doModels(GameState *g, Player *p, std::vector<returnValue *> 
 //pthread_mutex_lock(&mutex);
 //pthread_mutex_unlock(&mutex);
 
+
+#ifdef _WIN32
+// Windows: C++11 threading implementation
+void iiMonteCarlo::doThreadedModels(GameState *g, Player *p, std::vector<returnValue*> &v, std::vector<double> &probs)
+{
+	iiGameState *iiState;
+	Algorithm **algs;
+	threadModel **tm;
+	GameState **gameStates;
+	returnValue **results;
+	std::thread *threads;
+	threads = new std::thread[numModels];
+
+	v.resize(numModels);
+	results = new returnValue*[numModels];
+	algs = new Algorithm *[numModels];
+	tm = new threadModel *[numModels];
+	gameStates = new GameState *[numModels];
+	std::vector<int> modelQ;
+	for (int x = 0; x < numModels; x++)
+		modelQ.push_back(x);
+
+	iiState = g->getiiGameState(true, g->getPlayerNum(p), player);
+
+	if (!algorithm)
+	{
+		fprintf(stderr, "Error, algorithm is null, cannot do models!\n");
+		exit(0);
+	}
+
+	double probSum = 0;
+	for (int x = 0; x < numModels; x++)
+	{
+		v[x] = 0;
+		results[x] = 0;
+		double prob;
+		gameStates[x] = iiState->getGameState(prob);
+		probs.push_back(prob);
+		probSum += prob;
+		algs[x] = algorithm->clone();
+		algs[x]->resetCounters(gameStates[x]);
+		tm[x] = new threadModel();
+
+		tm[x]->alg = algs[x];
+		tm[x]->gs = gameStates[x];
+	}
+	for (int x = 0; x < numModels; x++)
+		probs[x]/=probSum;
+
+	// Use available CPUs for parallel execution
+	// Each cloned Algorithm now has unique random seed for thread-safety
+	int numCPU = std::thread::hardware_concurrency(); // Limited to 2 due to thread-safety issues
+	if (numCPU < 1) numCPU = 1;
+
+	int numRunning = 0;
+	std::deque<int> running;
+	while ((modelQ.size() > 0) || (numRunning > 0))
+	{
+		while ((numRunning < numCPU) && (modelQ.size() > 0))
+		{
+			int next = modelQ.back();
+			modelQ.pop_back();
+			running.push_back(next);
+			numRunning++;
+#if _PRINT_
+			printf("Starting up %d, %d now running\n", next, numRunning);
+#endif
+
+			// Launch thread with lambda to capture result
+			threadModel *m = tm[next];
+			returnValue **resPtr = &results[next];
+			threads[next] = std::thread([m, resPtr]() {
+				returnValue *val = m->alg->Analyze(m->gs, m->gs->getNextPlayer());
+				*resPtr = val;
+			});
+		}
+
+		int waitFor = running.front();
+		running.pop_front();
+		threads[waitFor].join();
+		v[waitFor] = results[waitFor];
+#if _PRINT_
+		printf("Got result from %d\n", waitFor);
+		v[waitFor]->Print();
+#endif
+		numRunning--;
+	}
+	for (int x = 0; x < numModels; x++)
+	{
+		delete algs[x];
+		algs[x] = 0;
+		delete tm[x];
+		tm[x] = 0;
+		delete gameStates[x];
+		gameStates[x] = 0;
+	}
+	delete [] tm;
+	delete [] algs;
+	delete [] gameStates;
+	delete [] results;
+	delete [] threads;
+	delete iiState;
+}
+
+void *doThreadedModel(void *data) { return nullptr; }
+#else
+// Unix/Mac implementation using pthreads
 void iiMonteCarlo::doThreadedModels(GameState *g, Player *p, std::vector<returnValue*> &v, std::vector<double> &probs)
 {
 	iiGameState *iiState;
@@ -218,7 +332,7 @@ void iiMonteCarlo::doThreadedModels(GameState *g, Player *p, std::vector<returnV
 	for (int x = 0; x < numModels; x++)
 		probs[x]/=probSum;
 	
-	int numCPU = 1;
+	int numCPU = std::thread::hardware_concurrency();
 #ifdef __APPLE__
 //	numCPU = MPProcessors();
 #endif
@@ -307,6 +421,7 @@ void *doThreadedModel(void *data)
 	return 0;
 #endif
 }
+#endif // _WIN32
 // this function is required of other algorithms for the sake of monte-carlo
 // experiments. 
 // but if we write it...will it allow recursive monte-carlo experiments(?)

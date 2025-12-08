@@ -1,5 +1,6 @@
 #include <cassert>
 #include <time.h>
+#include <mutex>
 #include "CardGameState.h"
 
 #ifdef __MWERKS__
@@ -1050,6 +1051,7 @@ void iiCardState::getCards(uint64_t val, std::vector<card> &theCards, int availa
 uint64_t iiCardState::choose(int n, int k)
 {
 	static std::vector<std::vector<uint64_t> > lookups;
+	static std::mutex lookups_mutex;
 
 	if (k > n)
         return 0;
@@ -1057,6 +1059,7 @@ uint64_t iiCardState::choose(int n, int k)
 //    if (k > n/2)
 //        k = n-k; // Take advantage of symmetry
 
+	std::lock_guard<std::mutex> lock(lookups_mutex);
 	if (n >= (int)lookups.size())
 		lookups.resize(n+1);
 	if (k >= (int)lookups[n].size())

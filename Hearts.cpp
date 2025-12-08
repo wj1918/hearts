@@ -1455,7 +1455,7 @@ maxnval *SimpleHeartsPlayer::DoRandomPlayout(GameState *gs, Player *p, double ep
 
 Move *SimpleHeartsPlayer::DoMinPlay(CardGameState *cgs, double epsilon)
 {
-	if (0||(rand.rand_double() < epsilon)) // x% chance of a rand move
+	if (0||(cgs->r.rand_double() < epsilon)) // x% chance of a rand move
 	{
 		return cgs->getRandomMove();
 	}
@@ -1463,7 +1463,7 @@ Move *SimpleHeartsPlayer::DoMinPlay(CardGameState *cgs, double epsilon)
 	const Trick *trick = cgs->getCurrTrick();
 	card winningCard = trick->WinningCard();
 //	int winner = trick->Winner();
-	mt_random rand;
+	// Use GameState random generator for thread-safety
 	
 	Move *m = cgs->getMoves();
 	Move *best = m;
@@ -1473,7 +1473,7 @@ Move *SimpleHeartsPlayer::DoMinPlay(CardGameState *cgs, double epsilon)
 		for (Move *t = m->next; t; t = t->next)
 		{
 			count += 1;
-			if (rand.rand_double() <= 1/count)
+			if (cgs->r.rand_double() <= 1/count)
 				best = t;
 		}
 		best = best->clone(cgs);
@@ -1486,7 +1486,7 @@ Move *SimpleHeartsPlayer::DoMinPlay(CardGameState *cgs, double epsilon)
 		for (Move *t = m->next; t; t = t->next)
 		{
 			count += 1;
-			if (rand.rand_double() <= 1/count)
+			if (cgs->r.rand_double() <= 1/count)
 				best = t;
 		}
 		best = best->clone(cgs);
@@ -1504,7 +1504,7 @@ Move *SimpleHeartsPlayer::DoMinPlay(CardGameState *cgs, double epsilon)
 				break;
 			}
 
-			if (rand.rand_double() <= 1/count)
+			if (cgs->r.rand_double() <= 1/count)
 				best = t;
 		}
 		best = best->clone(cgs);
@@ -1653,7 +1653,7 @@ double GlobalHeartsPlayer3::cutoffEval(unsigned int who)
 	//	return sum;// + g->score(lowest)/26.0; // bonus for hurting winning player
 //	if (lowest == who)
 //		return 1+(26-g->score(who));
-	return 26.0-g->score(who)+random()%3;
+	return 26.0-g->score(who)+::rand()%3;
 }
 //double sum = 0;
 //for (unsigned int x = 0; x < g->getNumPlayers(); x++)
@@ -1741,7 +1741,7 @@ maxnval *HeartsPlayout::DoRandomPlayout(GameState *gs, Player *p, double epsilon
 
 Move *HeartsPlayout::DoMinPlay(CardGameState *cgs, bool split, double epsilon)
 {
-	if (rand.rand_double() < epsilon) // x% chance of a rand move
+	if (cgs->r.rand_double() < epsilon) // x% chance of a rand move
 	{
 		return cgs->getRandomMove();
 	}
@@ -1768,7 +1768,7 @@ Move *HeartsPlayout::DoMinPlay(CardGameState *cgs, bool split, double epsilon)
 		for (Move *t = m->next; t; t = t->next)
 		{
 			count += 1;
-			if (rand.rand_double() <= 1/count)
+			if (cgs->r.rand_double() <= 1/count)
 				best = t;
 		}
 		best = best->clone(cgs);
@@ -1781,7 +1781,7 @@ Move *HeartsPlayout::DoMinPlay(CardGameState *cgs, bool split, double epsilon)
 		for (Move *t = m->next; t; t = t->next)
 		{
 			count += 1;
-			if (rand.rand_double() <= 1/count)
+			if (cgs->r.rand_double() <= 1/count)
 				best = t;
 		}
 		best = best->clone(cgs);
@@ -1799,7 +1799,7 @@ Move *HeartsPlayout::DoMinPlay(CardGameState *cgs, bool split, double epsilon)
 				break;
 			}
 			
-			if ((rand.rand_double() <= 1/count) || (Deck::getsuit(((CardMove*)t)->c) == HEARTS))
+			if ((cgs->r.rand_double() <= 1/count) || (Deck::getsuit(((CardMove*)t)->c) == HEARTS))
 				best = t;
 		}
 		best = best->clone(cgs);
@@ -1875,7 +1875,7 @@ maxnval *HeartsPlayoutCheckShoot::DoRandomPlayout(GameState *gs, Player *p, doub
 
 Move *HeartsPlayoutCheckShoot::DoMinPlay(CardGameState *cgs, bool split, double epsilon)
 {
-	if (rand.rand_double() < epsilon) // x% chance of a rand move
+	if (cgs->r.rand_double() < epsilon) // x% chance of a rand move
 	{
 		return cgs->getRandomMove();
 	}
@@ -1902,7 +1902,7 @@ Move *HeartsPlayoutCheckShoot::DoMinPlay(CardGameState *cgs, bool split, double 
 		for (Move *t = m->next; t; t = t->next)
 		{
 			count += 1;
-			if (rand.rand_double() <= 1/count)
+			if (cgs->r.rand_double() <= 1/count)
 				best = t;
 		}
 		best = best->clone(cgs);
@@ -1915,7 +1915,7 @@ Move *HeartsPlayoutCheckShoot::DoMinPlay(CardGameState *cgs, bool split, double 
 		for (Move *t = m->next; t; t = t->next)
 		{
 			count += 1;
-			if (rand.rand_double() <= 1/count)
+			if (cgs->r.rand_double() <= 1/count)
 				best = t;
 		}
 		best = best->clone(cgs);
@@ -1933,7 +1933,7 @@ Move *HeartsPlayoutCheckShoot::DoMinPlay(CardGameState *cgs, bool split, double 
 				break;
 			}
 			
-			if ((rand.rand_double() <= 1/count) || (Deck::getsuit(((CardMove*)t)->c) == HEARTS))
+			if ((cgs->r.rand_double() <= 1/count) || (Deck::getsuit(((CardMove*)t)->c) == HEARTS))
 				best = t;
 		}
 		best = best->clone(cgs);

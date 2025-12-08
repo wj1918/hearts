@@ -61,6 +61,7 @@ public:
 	UCT(int numRuns, int crossOver, double cval1, double cval2);
 	UCT(int numRuns = 10000, double cval = -1);
 	UCT(char *n, int numRuns = 10000, double cval = 2);
+	UCT(const UCT& other);  // Copy constructor for thread-safety
 	Algorithm *clone() const { return new UCT(*this); }
 	virtual const char *getName();// { return name; }
 	

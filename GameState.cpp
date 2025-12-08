@@ -3,6 +3,7 @@
 #include <time.h>
 #include <math.h>
 #include "GameState.h"
+#include <cstdint>
 #include "Player.h"
 
 namespace hearts {
@@ -23,7 +24,7 @@ GameState::GameState()
 	{ men[x] = 0; teams[x] = -1; }
 	moveList = 0;
 	game = 0;
-	//r.srand(time(0));
+	r.srand(time(0) ^ (uint32_t)(uintptr_t)this);  // Unique seed for thread-safety
 }
 
 GameState::~GameState()

@@ -12,6 +12,7 @@
 #include "fpUtil.h"
 #include <string>
 #include <sstream>
+#include <cstdint>
 
 namespace hearts {
 
@@ -81,6 +82,26 @@ UCT::UCT(char *n, int numRuns, double cval)
 	HH = false;
 	rand.srand(time(0));
 	verboseMoves = false;
+}
+
+// Copy constructor with unique random seeding for thread-safety
+UCT::UCT(const UCT& other)
+	: Algorithm(other)  // Call base class copy constructor
+{
+	pm = other.pm;  // UCTModule is typically shared (read-only)
+	name = other.name;
+	currTreeLoc = other.currTreeLoc;
+	numSamples = other.numSamples;
+	currentSample = other.currentSample;
+	switchLimit = other.switchLimit;
+	C1 = other.C1;
+	C2 = other.C2;
+	verboseMoves = other.verboseMoves;
+	HH = other.HH;
+	// Don't copy tree - each instance needs its own tree
+	epsilon = other.epsilon;
+	// Seed random uniquely using address of this object for thread-safety
+	rand.srand(time(0) ^ (uint32_t)(uintptr_t)this);
 }
 
 const char *UCT::getName()
@@ -439,7 +460,7 @@ returnValue *UCT::Analyze(GameState *g, Player *p) // return eval of all moves
 
 maxnval *UCT::DoRandomPlayout(GameState *g)
 {
-	static std::vector<int> distribution;
+	// Removed static distribution for thread-safety
 
 	if (!g->Done())
 	{

@@ -3,7 +3,7 @@
  *
  * timer.cpp
  * HOG file
- * 
+ *
  * Written by Renee Jansen on 08/28/06
  *
  * This file is part of HOG.
@@ -12,12 +12,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * HOG is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with HOG; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -42,6 +42,8 @@ void Timer::StartTimer()
 #elif defined( TIMER_USE_CYCLE_COUNTER )
 	CycleCounter c;
 	startTime = c.count();
+#elif defined(_WIN32)
+	startTime = std::chrono::high_resolution_clock::now();
 #else
 	gettimeofday( &startTime, NULL );
 #endif
@@ -54,10 +56,10 @@ float Timer::getCPUSpeed()
 	FILE *f;
 
 	static float answer = -1;
-	
+
 	if (answer != -1)
 		return answer;
-	
+
 	f = fopen("/proc/cpuinfo", "r");
 	if (f)
 	{
@@ -97,9 +99,14 @@ double Timer::EndTimer()
 	const static double ClocksPerSecond = getCPUSpeed() * 1000000.0;
 	elapsedTime = diffTime / ClocksPerSecond;
 	return elapsedTime;
+#elif defined(_WIN32)
+	auto stopTime = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stopTime - startTime);
+	elapsedTime = duration.count() / 1000000000.0;
+	return elapsedTime;
 #else
 	struct timeval stopTime;
-	
+
 	gettimeofday( &stopTime, NULL );
 	uint64_t microsecs = stopTime.tv_sec - startTime.tv_sec;
 	microsecs = microsecs * 1000000 + stopTime.tv_usec - startTime.tv_usec;

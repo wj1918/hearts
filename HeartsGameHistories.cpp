@@ -162,7 +162,7 @@ void GameHistories::SaveHistory()
 {
 	if (savePath)
 	{
-		char path[strlen(savePath)+strlen(userName)+100];
+		char path[1024];
 		
 		sprintf(path, "mkdir '%s/xinxin'", savePath);
 		system(path);
@@ -181,7 +181,7 @@ void GameHistories::LoadHistory()
 {
 	if (savePath)
 	{
-		char path[strlen(savePath)+strlen(userName)+100];
+		char path[1024];
 		
 		sprintf(path, "mkdir '%s/xinxin'", savePath);
 		system(path);
@@ -306,7 +306,7 @@ void GameHistories::SetUserName(const char *c)
 
 void GameHistories::CreateUserData()
 {
-	char path[strlen(savePath)+strlen(userName)+100];
+	char path[1024];
 	
 	sprintf(path, "%s/xinxin/%s.upload", savePath, userName);
 	FILE *f = fopen(path, "r");
@@ -331,21 +331,21 @@ void GameHistories::CreateUserData()
 	f = fopen(path, "w+");
 	if (!f) return; // can't create for some reason -- should we throw error?
 
-	//srandom(time(NULL));
+	//srand(time(NULL));
 	long vals[129];
 	for (int x = 0; x < 129; x++)
-		vals[x] = random();
-	long val=random();
+		vals[x] = rand();
+	long val=rand();
 	for (int x = 0; x < strlen(userName); x++)
 		val ^= vals[(userName[x]+17*x)%129];
-	srandom(val);
-	fprintf(f, "%X%X\n", random()^random(), random());
+	srand(val);
+	fprintf(f, "%X%X\n", rand()^rand(), rand());
 	fclose(f);
 }
 
 int GameHistories::GetLastSentGame()
 {
-	char path[strlen(savePath)+strlen(userName)+100];	
+	char path[1024];	
 	sprintf(path, "%s/xinxin/%s.upload", savePath, userName);
 	FILE *f = fopen(path, "r");
 	if (!f) return -2;
@@ -357,7 +357,7 @@ int GameHistories::GetLastSentGame()
 
 void GameHistories::SetGameUploaded(int which)
 {
-	char path[strlen(savePath)+strlen(userName)+100];	
+	char path[1024];	
 	sprintf(path, "%s/xinxin/%s.upload", savePath, userName);
 	FILE *f = fopen(path, "w+");
 	if (!f) return;
@@ -368,7 +368,7 @@ void GameHistories::SetGameUploaded(int which)
 const char *GameHistories::GetUserRandomName()
 {
 	static char name[32];
-	char path[strlen(savePath)+strlen(userName)+100];	
+	char path[1024];	
 	sprintf(path, "%s/xinxin/%s.keyname", savePath, userName);
 	FILE *f = fopen(path, "r");
 	if (!f) 

@@ -112,7 +112,8 @@ void mt_random::lsrand(uint32_t init_key[], int key_length)
 uint32_t mt_random::rand_long()
 {
     uint32_t y;
-    static uint32_t mag01[2]={0x0UL, MATRIX_A};
+    // Removed static for thread-safety - mag01 is a small const array
+    const uint32_t mag01[2]={0x0UL, MATRIX_A};
     /* mag01[x] = x * MATRIX_A  for x=0,1 */
 
     if (mti >= NN) { /* generate N words at one time */

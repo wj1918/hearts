@@ -2,6 +2,7 @@
 #include "GameState.h"
 #include "Player.h"
 #include <time.h>
+#include <cstdint>
 #include <assert.h>
 #include "Timer.h"
 
@@ -44,6 +45,8 @@ Algorithm::Algorithm(const Algorithm& a)
 //	printf("Called algorithm copy constructor\n");
 	who = 0; prevBest = 0;
 	returnValueList = 0;
+	// Seed random uniquely using address of this object for thread-safety
+	rand.srand(time((time_t*)0) ^ (uint32_t)(uintptr_t)this);
 	iterDepth = a.iterDepth;
 	USEHASH = a.USEHASH;
 	VERIFYHASH = a.VERIFYHASH;
