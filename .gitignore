@@ -35,3 +35,5 @@
 *.out
 *.app
 hearts
+thread_pool_test
+resource_leak_test
