@@ -62,6 +62,7 @@ public:
 	UCT(int numRuns = 10000, double cval = -1);
 	UCT(char *n, int numRuns = 10000, double cval = 2);
 	UCT(const UCT& other);  // Copy constructor for thread-safety
+	virtual ~UCT();  // Destructor to clean up UCTModule
 	Algorithm *clone() const { return new UCT(*this); }
 	virtual const char *getName();// { return name; }
 	
@@ -89,6 +90,7 @@ protected:
 	Move *GibbsSample(GameState *g);
 
 	UCTModule *pm;
+	bool ownsModule;  // True if this instance owns pm and should delete it
 	mt_random rand;
 	//char name[64];
 	std::string name;

@@ -56,7 +56,7 @@ iiMonteCarlo::iiMonteCarlo(Player *_player, int _numModels)
 
 iiMonteCarlo::~iiMonteCarlo()
 {
-//	delete algorithm;
+	delete algorithm;  // Clean up owned algorithm (e.g., UCT)
 	delete player;
 }
 

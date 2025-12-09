@@ -29,6 +29,7 @@ UCT::UCT(int numRuns, double cval1, double cval2)
 	C2 = cval2;
 	epsilon = 0;
 	pm = 0;
+	ownsModule = true;  // Original instances own their module
 //	RAVE = 0;
 	HH = false;
 	rand.srand(time(0));
@@ -45,6 +46,7 @@ UCT::UCT(int numRuns, int crossOver, double cval1, double cval2)
 	C2 = cval2;
 	epsilon = 0;
 	pm = 0;
+	ownsModule = true;  // Original instances own their module
 //	RAVE = 0;
 	HH = false;
 	rand.srand(time(0));
@@ -61,6 +63,7 @@ UCT::UCT(int numRuns, double cval)
 	switchLimit = -1;
 	epsilon = 0;
 	pm = 0;
+	ownsModule = true;  // Original instances own their module
 //	RAVE = 0;
 	HH = false;
 	rand.srand(time(0));
@@ -78,6 +81,7 @@ UCT::UCT(char *n, int numRuns, double cval)
 	switchLimit = -1;
 	epsilon = 0;
 	pm = 0;
+	ownsModule = true;  // Original instances own their module
 //	RAVE = 0;
 	HH = false;
 	rand.srand(time(0));
@@ -88,7 +92,8 @@ UCT::UCT(char *n, int numRuns, double cval)
 UCT::UCT(const UCT& other)
 	: Algorithm(other)  // Call base class copy constructor
 {
-	pm = other.pm;  // UCTModule is typically shared (read-only)
+	pm = other.pm;  // UCTModule is shared (read-only) among clones
+	ownsModule = false;  // Clones don't own the module - original does
 	name = other.name;
 	currTreeLoc = other.currTreeLoc;
 	numSamples = other.numSamples;
@@ -102,6 +107,17 @@ UCT::UCT(const UCT& other)
 	epsilon = other.epsilon;
 	// Seed random uniquely using address of this object for thread-safety
 	rand.srand(time(0) ^ (uint32_t)(uintptr_t)this);
+}
+
+UCT::~UCT()
+{
+	// Only delete the playout module if this instance owns it
+	// Clones share the module but don't own it
+	if (ownsModule && pm)
+	{
+		delete pm;
+		pm = 0;
+	}
 }
 
 const char *UCT::getName()
