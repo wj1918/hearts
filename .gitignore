@@ -37,3 +37,8 @@
 hearts
 thread_pool_test
 resource_leak_test
+utility_test
+game_core_test
+
+# Test output files
+results.txt

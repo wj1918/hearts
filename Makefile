@@ -29,11 +29,24 @@ resource_leak_test: resource_leak_test.o $(libobjects)
 resource_leak_test.o: resource_leak_test.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-tests: thread_pool_test resource_leak_test
+utility_test: utility_test.o $(libobjects)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+utility_test.o: utility_test.cc
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+game_core_test: game_core_test.o $(libobjects)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+game_core_test.o: game_core_test.cc
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+tests: thread_pool_test resource_leak_test utility_test game_core_test
 
 run-tests: tests
-	./thread_pool_test
 	./resource_leak_test
+	./utility_test
+	./game_core_test
 
 depend: .depend
 
@@ -42,7 +55,7 @@ depend: .depend
 	$(CXX) $(CXXFLAGS) -MM $^>>./.depend;
 
 clean:
-	rm -f $(objects) thread_pool_test thread_pool_test.o resource_leak_test resource_leak_test.o
+	rm -f $(objects) thread_pool_test thread_pool_test.o resource_leak_test resource_leak_test.o utility_test utility_test.o game_core_test game_core_test.o
 
 dist-clean: clean
 	rm -f *~ .depend
