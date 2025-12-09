@@ -41,6 +41,12 @@ game_core_test: game_core_test.o $(libobjects)
 game_core_test.o: game_core_test.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
+perf_benchmark: perf_benchmark.o $(libobjects)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+perf_benchmark.o: perf_benchmark.cc
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 tests: thread_pool_test resource_leak_test utility_test game_core_test
 
 run-tests: tests
@@ -55,7 +61,7 @@ depend: .depend
 	$(CXX) $(CXXFLAGS) -MM $^>>./.depend;
 
 clean:
-	rm -f $(objects) thread_pool_test thread_pool_test.o resource_leak_test resource_leak_test.o utility_test utility_test.o game_core_test game_core_test.o
+	rm -f $(objects) thread_pool_test thread_pool_test.o resource_leak_test resource_leak_test.o utility_test utility_test.o game_core_test game_core_test.o perf_benchmark perf_benchmark.o
 
 dist-clean: clean
 	rm -f *~ .depend

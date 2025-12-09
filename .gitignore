@@ -39,6 +39,7 @@ thread_pool_test
 resource_leak_test
 utility_test
 game_core_test
+perf_benchmark
 
 # Test output files
 results.txt
