@@ -37,7 +37,8 @@ Algorithm::Algorithm()
 	prevBest = 0;
 	returnValueList = 0;
 	totalNodesExpanded = 0;
-	rand.srand(time((time_t*)0));
+	// Seed with time and object address for uniqueness across rapid instantiation
+	rand.srand(time((time_t*)0) ^ (uint32_t)(uintptr_t)this);
 }
 
 Algorithm::Algorithm(const Algorithm& a)

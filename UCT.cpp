@@ -13,11 +13,13 @@
 #include <string>
 #include <sstream>
 #include <cstdint>
+#include <atomic>
 
 namespace hearts {
 
 const int debugState = 0;
-static bool verbose = false;
+// Thread-safe debug flag - atomic to prevent data races when accessed from multiple threads
+static std::atomic<bool> verbose{false};
 
 UCT::UCT(int numRuns, double cval1, double cval2)
 {
@@ -32,7 +34,8 @@ UCT::UCT(int numRuns, double cval1, double cval2)
 	ownsModule = true;  // Original instances own their module
 //	RAVE = 0;
 	HH = false;
-	rand.srand(time(0));
+	// Seed with time and object address for uniqueness across rapid instantiation
+	rand.srand(time(0) ^ (uint32_t)(uintptr_t)this);
 	verboseMoves = false;
 }
 
@@ -49,7 +52,8 @@ UCT::UCT(int numRuns, int crossOver, double cval1, double cval2)
 	ownsModule = true;  // Original instances own their module
 //	RAVE = 0;
 	HH = false;
-	rand.srand(time(0));
+	// Seed with time and object address for uniqueness across rapid instantiation
+	rand.srand(time(0) ^ (uint32_t)(uintptr_t)this);
 	verboseMoves = false;
 }
 
@@ -66,7 +70,8 @@ UCT::UCT(int numRuns, double cval)
 	ownsModule = true;  // Original instances own their module
 //	RAVE = 0;
 	HH = false;
-	rand.srand(time(0));
+	// Seed with time and object address for uniqueness across rapid instantiation
+	rand.srand(time(0) ^ (uint32_t)(uintptr_t)this);
 	verboseMoves = false;
 	//printf("%s\n", getName());
 }
@@ -84,7 +89,8 @@ UCT::UCT(char *n, int numRuns, double cval)
 	ownsModule = true;  // Original instances own their module
 //	RAVE = 0;
 	HH = false;
-	rand.srand(time(0));
+	// Seed with time and object address for uniqueness across rapid instantiation
+	rand.srand(time(0) ^ (uint32_t)(uintptr_t)this);
 	verboseMoves = false;
 }
 
