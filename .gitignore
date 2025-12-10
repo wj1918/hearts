@@ -43,3 +43,10 @@ perf_benchmark
 
 # Test output files
 results.txt
+
+# CMake build directory
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile.cmake
