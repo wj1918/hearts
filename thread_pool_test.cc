@@ -144,7 +144,7 @@ void TestBinomialLookup_ThreadSafety() {
   std::vector<std::thread> threads;
 
   for (int t = 0; t < NUM_THREADS; t++) {
-    threads.emplace_back([&errors, t]() {
+    threads.emplace_back([&errors, t, ITERATIONS]() {
       BinomialLookup& lookup = BinomialLookup::getInstance();
       std::mt19937 rng(t);
 
@@ -241,14 +241,14 @@ void TestCompletionQueue_ProducerConsumer() {
   std::atomic<int> sum{0};
 
   // Producer thread
-  std::thread producer([&queue]() {
+  std::thread producer([&queue, NUM_ITEMS]() {
     for (int i = 1; i <= NUM_ITEMS; i++) {
       queue.push(i);
     }
   });
 
   // Consumer thread
-  std::thread consumer([&queue, &sum]() {
+  std::thread consumer([&queue, &sum, NUM_ITEMS]() {
     for (int i = 0; i < NUM_ITEMS; i++) {
       int value = queue.pop();
       sum += value;
@@ -610,7 +610,7 @@ void TestThreadSafety_CompletionQueueHighContention() {
   // Signal done and wait for queue to drain
   done = true;
   while (!queue.empty() || itemsConsumed.load() < itemsProduced.load()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
 
   for (auto& c : consumers) {
@@ -716,9 +716,9 @@ void TestPerformance_ParallelSpeedup() {
 
   ThreadPool& pool = ThreadPool::getInstance();
 
-  // CPU-bound work function
+  // CPU-bound work function (use volatile to prevent optimization)
   auto heavyWork = [](int iterations) -> long long {
-    long long result = 0;
+    volatile long long result = 0;
     for (int i = 0; i < iterations; i++) {
       result += (i * i) % 1000000007;
     }
@@ -731,9 +731,9 @@ void TestPerformance_ParallelSpeedup() {
 
   // Sequential execution
   auto start = std::chrono::high_resolution_clock::now();
-  long long seqResult = heavyWork(WORK_SIZE);
+  volatile long long seqResult = heavyWork(WORK_SIZE);
   auto end = std::chrono::high_resolution_clock::now();
-  auto seqTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  auto seqTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
   // Parallel execution
   start = std::chrono::high_resolution_clock::now();
@@ -749,12 +749,12 @@ void TestPerformance_ParallelSpeedup() {
     parResult += f.get();
   }
   end = std::chrono::high_resolution_clock::now();
-  auto parTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  auto parTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-  double speedup = static_cast<double>(seqTime) / parTime;
+  double speedup = (parTime > 0) ? static_cast<double>(seqTime) / parTime : 0.0;
 
-  std::cout << "    Sequential: " << seqTime << " ms, Parallel: " << parTime
-            << " ms, Speedup: " << speedup << "x" << std::endl;
+  std::cout << "    Sequential: " << seqTime << " us, Parallel: " << parTime
+            << " us, Speedup: " << speedup << "x" << std::endl;
 
   // On multi-core systems, we should see some speedup
   if (pool.getThreadCount() > 1) {
@@ -810,7 +810,7 @@ void TestIntegration_SimulatedMonteCarloWorkload() {
   }
 
   auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
   // Verify all models completed
   TEST_CHECK_EQ(completionOrder.size(), static_cast<size_t>(NUM_MODELS));
