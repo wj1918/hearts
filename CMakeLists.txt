@@ -52,26 +52,7 @@ target_link_libraries(hearts PRIVATE hearts_lib)
 # Enable testing
 enable_testing()
 
-# Test executables
-# thread_pool_test only needs pthread (no library objects)
-# add_executable(thread_pool_test thread_pool_test.cc)
-# target_link_libraries(thread_pool_test PRIVATE Threads::Threads)
-# add_test(NAME thread_pool_test COMMAND thread_pool_test)
-
-# Tests that need the library
-# add_executable(resource_leak_test resource_leak_test.cc)
-# target_link_libraries(resource_leak_test PRIVATE hearts_lib)
-# add_test(NAME resource_leak_test COMMAND resource_leak_test)
-
-# add_executable(utility_test utility_test.cc)
-# target_link_libraries(utility_test PRIVATE hearts_lib)
-# add_test(NAME utility_test COMMAND utility_test)
-
-# add_executable(game_
-# core_test game_core_test.cc)
-# target_link_libraries(game_core_test PRIVATE hearts_lib)
-# add_test(NAME game_core_test COMMAND game_core_test)
-
-# add_executable(perf_benchmark perf_benchmark.cc)
-# target_link_libraries(perf_benchmark PRIVATE hearts_lib)
-# add_test(NAME perf_benchmark COMMAND perf_benchmark)
+# Comprehensive test suite
+add_executable(hearts_tests tests.cpp)
+target_link_libraries(hearts_tests PRIVATE hearts_lib)
+add_test(NAME hearts_tests COMMAND hearts_tests)
