@@ -56,3 +56,7 @@ enable_testing()
 add_executable(hearts_tests tests.cpp)
 target_link_libraries(hearts_tests PRIVATE hearts_lib)
 add_test(NAME hearts_tests COMMAND hearts_tests)
+
+# Performance benchmark
+add_executable(hearts_benchmark benchmark.cpp)
+target_link_libraries(hearts_benchmark PRIVATE hearts_lib)
