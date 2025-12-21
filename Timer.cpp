@@ -39,6 +39,8 @@ void Timer::StartTimer()
 {
 #ifdef OS_MAC
 	startTime = UpTime();
+#elif defined(_WIN32)
+	startTime = std::chrono::high_resolution_clock::now();
 #elif defined( TIMER_USE_CYCLE_COUNTER )
 	CycleCounter c;
 	startTime = c.count();
@@ -91,6 +93,11 @@ double Timer::EndTimer()
 	uint64_t nanosecs = UnsignedWideToUInt64(diff);
 	//cout << nanosecs << " ns elapsed (" << (double)nanosecs/1000000.0 << " ms)" << endl;
 	return elapsedTime = (double)(nanosecs/1000000000.0);
+#elif defined(_WIN32)
+	auto stopTime = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stopTime - startTime);
+	elapsedTime = (double)duration.count() / 1000000.0;
+	return elapsedTime;
 #elif defined( TIMER_USE_CYCLE_COUNTER )
 	Timer::CycleCounter c;
 	double diffTime = (double)(c.count() - startTime);
@@ -99,7 +106,7 @@ double Timer::EndTimer()
 	return elapsedTime;
 #else
 	struct timeval stopTime;
-	
+
 	gettimeofday( &stopTime, NULL );
 	uint64_t microsecs = stopTime.tv_sec - startTime.tv_sec;
 	microsecs = microsecs * 1000000 + stopTime.tv_usec - startTime.tv_usec;

@@ -2,24 +2,10 @@
 #include "algorithmStates.h"
 #include <vector>
 
-#ifdef __MAC__
-#include <CoreServices/CoreServices.h>
-//#include <Multiprocessing.h>
-#endif
-
 #ifndef iiMonteCarlo_h
 #define iiMonteCarlo_h
 
 namespace hearts {
-
-class threadModel {
-	public:
-		Algorithm *alg;
-		GameState *gs;
-#ifdef __MAC__
-		MPQueueID returnQ;
-#endif
-};
 
 enum decisionRule {
 	kMaxWeighted,
@@ -55,12 +41,6 @@ private:
 	Player *player;
 	decisionRule dr;
 };
-
-#ifdef __MAC__
-OSStatus doThreadedModel(void *data);
-#else
-void *doThreadedModel(void *data);
-#endif
 
 } // namespace hearts
 

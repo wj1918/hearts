@@ -2,9 +2,7 @@
 #include "iiMonteCarlo.h"
 
 #include <deque>
-#include <pthread.h>
-#ifndef __MAC__
-#else
+#ifdef __MAC__
 #include <CoreServices/CoreServices.h>
 #endif
 #include <assert.h>
@@ -155,157 +153,11 @@ void iiMonteCarlo::doModels(GameState *g, Player *p, std::vector<returnValue *> 
 	//return v;
 }
 
-//pthread_mutex_t mutex;
-//pthread_mutex_init(&mutex, 0);
-//pthread_mutex_destroy(&mutex);
-//pthread_mutex_lock(&mutex);
-//pthread_mutex_unlock(&mutex);
-
+// Threading removed - now single-threaded only
 void iiMonteCarlo::doThreadedModels(GameState *g, Player *p, std::vector<returnValue*> &v, std::vector<double> &probs)
 {
-	iiGameState *iiState;
-	Algorithm **algs;
-	threadModel **tm;
-	//returnValue **v;
-	GameState **gameStates;
-#ifndef __MAC__
-	pthread_t *threads;
-	threads = new pthread_t[numModels];
-#else
-	MPQueueID returnQ;
-	MPTaskID *threads;
-	threads = new MPTaskID[numModels];
-	MPCreateQueue(&returnQ);
-#endif
-	
-	v.resize(numModels);
-	//v = new returnValue *[numModels];
-	algs = new Algorithm *[numModels];
-	tm = new threadModel *[numModels];
-	gameStates = new GameState *[numModels];
-	std::vector<int> modelQ;
-	for (int x = 0; x < numModels; x++)
-		modelQ.push_back(x);
-	
-	iiState = g->getiiGameState(true, g->getPlayerNum(p), player);
-
-	if (!algorithm)
-	{
-		fprintf(stderr, "Error, algorithm is null, can't do models!\n");
-		exit(0);
-	}
-	
-	double probSum = 0;
-	for (int x = 0; x < numModels; x++)
-	{
-		threads[x] = 0;
-		v[x] = 0;
-		double prob;
-		gameStates[x] = iiState->getGameState(prob);
-		probs.push_back(prob);
-		probSum += prob;
-		algs[x] = algorithm->clone();
-		algs[x]->resetCounters(gameStates[x]);
-		tm[x] = new threadModel();
-
-		tm[x]->alg = algs[x];
-		tm[x]->gs = gameStates[x];
-		//tm[x]->v = &v[x];
-#ifdef __MAC__
-		tm[x]->returnQ = returnQ;
-#endif
-	}
-	for (int x = 0; x < numModels; x++)
-		probs[x]/=probSum;
-	
-	int numCPU = 1;
-#ifdef __APPLE__
-//	numCPU = MPProcessors();
-#endif
-	int numRunning = 0;
-	std::deque<int> running;
-	while ((modelQ.size() > 0) || (numRunning > 0))
-	{
-		while ((numRunning < numCPU) && (modelQ.size() > 0))
-		{
-			int next = modelQ.back();
-			modelQ.pop_back();
-			running.push_back(next);
-			numRunning++;
-#if _PRINT_
-			printf("Starting up %d, %d now running\n", next, numRunning);
-#endif
-			
-#ifndef __MAC__
-			pthread_create(&threads[next], NULL, doThreadedModel, (void**)tm[next]);
-#else
-			MPCreateTask(doThreadedModel, (void*)tm[next], 512*1024, 0, NULL, NULL, 0, &threads[next]); 
-#endif
-		}
-
-		int res;
-		int waitFor = running.front();
-		running.pop_front();
-#ifndef __MAC__
-		res = pthread_join(threads[waitFor], (void **)&v[waitFor]);
-#else
-		res = MPWaitOnQueue(returnQ, (void **)&v[waitFor], 0, 0, kDurationForever);
-		if (v[waitFor] == 0)
-		{ printf("Got NIL return\n");  }
-#endif
-#if _PRINT_
-		printf("Got result from %d\n", waitFor);
-		v[waitFor]->Print();
-#endif
-		numRunning--;
-		if (res != 0)
-		{
-			printf("Error %d joining with %d\n", res, waitFor);
-			exit(1);
-		}
-	}
-	for (int x = 0; x < numModels; x++)
-	{
-		//printf("deleting alg %d: %p\n", x, algs[x]);	fflush(stdout);
-		delete algs[x];
-		algs[x] = 0;
-		//printf("deleting tm %d\n", x);	fflush(stdout);
-		delete tm[x];
-		tm[x] = 0;
-		//printf("deleting gamestate players\n");	fflush(stdout);
-		//gameStates[x]->deletePlayers();
-		//printf("deleting gamestate %d\n", x);	fflush(stdout);
-		delete gameStates[x];
-		gameStates[x] = 0;
-	}
-#ifdef __MAC__
-	MPDeleteQueue(returnQ);
-#endif
-	delete [] tm;
-	delete [] algs;
-	delete [] gameStates;
-	delete [] threads;
-	delete iiState;
-	//return v;
-}
-
-#ifdef __MAC__
-OSStatus doThreadedModel(void *data)
-#else
-void *doThreadedModel(void *data)
-#endif
-{
-	threadModel *m = (threadModel *)data;
-	returnValue *val = m->alg->Analyze(m->gs, m->gs->getNextPlayer());
-	//printf("Writing to: %p (%p)\n", (m->v), m);
-#ifndef __MAC__
-	pthread_exit((void *)val);
-	return 0;
-#else
-	MPNotifyQueue(m->returnQ, (void *)val, 0, 0);
-	MPExit(0);
-	return 0;
-#endif
+	// Just call the single-threaded version
+	doModels(g, p, v, probs);
 }
 // this function is required of other algorithms for the sake of monte-carlo
 // experiments. 

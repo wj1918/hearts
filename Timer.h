@@ -31,6 +31,8 @@
 #ifdef OS_MAC
 #include <Carbon/Carbon.h>
 #undef check
+#elif defined(_WIN32)
+#include <chrono>
 #else
 #include <sys/time.h>
 #endif
@@ -70,6 +72,8 @@ public:
 private:
 #ifdef OS_MAC
   AbsoluteTime startTime;
+#elif defined(_WIN32)
+  std::chrono::high_resolution_clock::time_point startTime;
 #elif defined( TIMER_USE_CYCLE_COUNTER )
   // clock_t startTime;
   uint64_t startTime;

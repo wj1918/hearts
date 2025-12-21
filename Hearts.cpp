@@ -1653,7 +1653,7 @@ double GlobalHeartsPlayer3::cutoffEval(unsigned int who)
 	//	return sum;// + g->score(lowest)/26.0; // bonus for hurting winning player
 //	if (lowest == who)
 //		return 1+(26-g->score(who));
-	return 26.0-g->score(who)+random()%3;
+	return 26.0-g->score(who)+std::rand()%3;
 }
 //double sum = 0;
 //for (unsigned int x = 0; x < g->getNumPlayers(); x++)
