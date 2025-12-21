@@ -2,16 +2,11 @@
 #include "iiMonteCarlo.h"
 
 #include <deque>
-#ifdef __MAC__
-#include <CoreServices/CoreServices.h>
-#endif
+#include <thread>
+#include <vector>
 #include <assert.h>
 #include "iiGameState.h"
 #include "fpUtil.h"
-
-#ifdef __MAC__
-//#include "Diagnostics.h"
-#endif
 
 namespace hearts {
 
@@ -153,11 +148,111 @@ void iiMonteCarlo::doModels(GameState *g, Player *p, std::vector<returnValue *> 
 	//return v;
 }
 
-// Threading removed - now single-threaded only
+// Thread worker function - runs algorithm on a single world model
+void doThreadedModel(threadModel *m)
+{
+	m->result = m->alg->Analyze(m->gs, m->gs->getNextPlayer());
+}
+
+// Multi-threaded world model evaluation using std::thread
 void iiMonteCarlo::doThreadedModels(GameState *g, Player *p, std::vector<returnValue*> &v, std::vector<double> &probs)
 {
-	// Just call the single-threaded version
-	doModels(g, p, v, probs);
+	iiGameState *iiState;
+	Algorithm **algs;
+	threadModel **tm;
+	GameState **gameStates;
+	std::thread *threads;
+
+	threads = new std::thread[numModels];
+	v.resize(numModels);
+	algs = new Algorithm *[numModels];
+	tm = new threadModel *[numModels];
+	gameStates = new GameState *[numModels];
+	std::vector<int> modelQ;
+	for (int x = 0; x < numModels; x++)
+		modelQ.push_back(x);
+
+	iiState = g->getiiGameState(true, g->getPlayerNum(p), player);
+
+	if (!algorithm)
+	{
+		fprintf(stderr, "Error, algorithm is null, can't do models!\n");
+		exit(0);
+	}
+
+	// Setup work items for each world model
+	double probSum = 0;
+	for (int x = 0; x < numModels; x++)
+	{
+		v[x] = 0;
+		double prob;
+		gameStates[x] = iiState->getGameState(prob);
+		probs.push_back(prob);
+		probSum += prob;
+		algs[x] = algorithm->clone();
+		algs[x]->resetCounters(gameStates[x]);
+		tm[x] = new threadModel();
+		tm[x]->alg = algs[x];
+		tm[x]->gs = gameStates[x];
+		tm[x]->result = nullptr;
+	}
+	for (int x = 0; x < numModels; x++)
+		probs[x] /= probSum;
+
+	// Get number of hardware threads available
+	unsigned int numCPU = std::thread::hardware_concurrency();
+	if (numCPU == 0) numCPU = 1;  // Fallback if detection fails
+
+	int numRunning = 0;
+	std::deque<int> running;
+
+	while ((modelQ.size() > 0) || (numRunning > 0))
+	{
+		// Launch threads up to CPU limit
+		while ((numRunning < (int)numCPU) && (modelQ.size() > 0))
+		{
+			int next = modelQ.back();
+			modelQ.pop_back();
+			running.push_back(next);
+			numRunning++;
+#if _PRINT_
+			printf("Starting up %d, %d now running\n", next, numRunning);
+#endif
+			threads[next] = std::thread(doThreadedModel, tm[next]);
+		}
+
+		// Wait for first thread in queue to complete
+		int waitFor = running.front();
+		running.pop_front();
+
+		if (threads[waitFor].joinable())
+		{
+			threads[waitFor].join();
+			v[waitFor] = tm[waitFor]->result;
+		}
+#if _PRINT_
+		printf("Got result from %d\n", waitFor);
+		if (v[waitFor])
+			v[waitFor]->Print();
+#endif
+		numRunning--;
+	}
+
+	// Cleanup
+	for (int x = 0; x < numModels; x++)
+	{
+		delete algs[x];
+		algs[x] = 0;
+		delete tm[x];
+		tm[x] = 0;
+		delete gameStates[x];
+		gameStates[x] = 0;
+	}
+	delete [] tm;
+	delete [] algs;
+	delete [] gameStates;
+	delete [] threads;
+	delete iiState;
 }
 // this function is required of other algorithms for the sake of monte-carlo
 // experiments. 

@@ -1,11 +1,20 @@
 #include "Algorithm.h"
 #include "algorithmStates.h"
 #include <vector>
+#include <thread>
 
 #ifndef iiMonteCarlo_h
 #define iiMonteCarlo_h
 
 namespace hearts {
+
+// Thread work item for parallel model evaluation
+class threadModel {
+public:
+	Algorithm *alg;
+	GameState *gs;
+	returnValue *result;  // Output stored here after thread completes
+};
 
 enum decisionRule {
 	kMaxWeighted,
@@ -41,6 +50,9 @@ private:
 	Player *player;
 	decisionRule dr;
 };
+
+// Thread worker function
+void doThreadedModel(threadModel *m);
 
 } // namespace hearts
 
