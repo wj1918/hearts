@@ -239,7 +239,7 @@ returnValue *UCT::Play(GameState *g, Player *p) // choose next move
 		//iterDepth = x;
 		if (time(0)-start > limit)
 		{
-			printf("%ld elapsed\n", time(0)-start);
+			printf("%lld elapsed\n", (long long)(time(0)-start));
 			break;
 		}
 		if (((numSamples != -1) && (loopCount >= numSamples)) ||

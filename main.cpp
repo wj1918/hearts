@@ -120,8 +120,6 @@ void PlayGame(statistics &s)
 	int org = rand()%14;
 	for (int x = 0; x < 4; x++)
 	{
-		int player = order[org][x];
-		SimpleHeartsPlayer *p; iiMonteCarlo *a; UCT *b;
 		game.addPlayer(GetPlayer(order[org][x]));
 	}
 

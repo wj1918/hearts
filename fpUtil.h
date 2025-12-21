@@ -22,7 +22,7 @@ namespace hearts {
 
 // Floating point comparisons 
 static const double TOLERANCE_D = 0.000001;    // floating point tolerance
-static const float  TOLERANCE_F = 0.00005;    // floating point tolerance
+static const float  TOLERANCE_F = 0.00005f;   // floating point tolerance
 
 inline bool fless(double a, double b) { return (a < b - TOLERANCE_D); }
 inline bool fgreater(double a, double b) { return (a > b + TOLERANCE_D); }

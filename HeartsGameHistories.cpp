@@ -37,7 +37,7 @@ SingleGameHistory::SingleGameHistory(FILE *f)
 
 void SingleGameHistory::save(FILE *f)
 {
-	fprintf(f, "%d\n", hands.size());
+	fprintf(f, "%zu\n", hands.size());
 	fprintf(f, "%s %s %s %d\n", pl[0], pl[1], pl[2], rules);
 	for (unsigned int x = 0; x < hands.size(); x++)
 		hands[x].save(f);
@@ -75,14 +75,6 @@ const SingleHandHistory &SingleGameHistory::GetHand(unsigned int which) const
 {
 	assert (which < hands.size());
 	return hands[which];
-}
-
-int SingleGameHistory::GetTotalScore(int who, int limit) const
-{
-	int sum=0;
-	for (unsigned int x = 0; (x<=limit) && (x < hands.size()); x++)
-		sum+=hands[x].scores[who];
-	return sum;
 }
 
 int SingleGameHistory::GetTotalScore(int who) const
@@ -194,9 +186,9 @@ void GameHistories::LoadHistory()
 		sprintf(path, "%s/xinxin/%s.play", savePath, userName);
 		FILE *f = fopen(path, "r");
 		if (!f) return;
-		int count;
-		fscanf(f, "%d\n", &count);
-		printf("Loading %d games\n", count);
+		unsigned int count;
+		fscanf(f, "%u\n", &count);
+		printf("Loading %u games\n", count);
 		for (unsigned int x = 0; x < count; x++)
 		{
 			SingleGameHistory h(f);

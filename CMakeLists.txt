@@ -6,7 +6,13 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Compiler flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g")
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    # /wd4267 /wd4244: suppress size_t to int narrowing warnings (safe for bounded game values)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /wd4267 /wd4244")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g")
+endif()
 
 # Find pthreads
 find_package(Threads REQUIRED)

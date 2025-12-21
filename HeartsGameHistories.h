@@ -38,7 +38,6 @@ public:
 	void AddHand(SingleHandHistory &h);
 	unsigned int GetNumHands() const;
 	const SingleHandHistory &GetHand(unsigned int which) const;
-	int GetTotalScore(int who, int limit) const;
 	int GetTotalScore(int who) const;
 	int GetScore(int who, int game) const;
 	void GetIntermediateScores(std::vector<int> &players, int hand, int trick) const;
