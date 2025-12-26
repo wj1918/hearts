@@ -60,3 +60,23 @@ add_test(NAME hearts_tests COMMAND hearts_tests)
 # Performance benchmark
 add_executable(hearts_benchmark benchmark.cpp)
 target_link_libraries(hearts_benchmark PRIVATE hearts_lib)
+
+# HTTP REST API Server
+set(SERVER_SOURCES
+    server/ServerMain.cpp
+    server/HeartsAIServer.cpp
+    server/AIRequestHandler.cpp
+    server/JsonProtocol.cpp
+)
+
+add_executable(hearts_server ${SERVER_SOURCES})
+target_include_directories(hearts_server PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+)
+target_link_libraries(hearts_server PRIVATE hearts_lib Threads::Threads)
+
+# Windows: link socket libraries for cpp-httplib
+if(WIN32)
+    target_link_libraries(hearts_server PRIVATE ws2_32)
+endif()

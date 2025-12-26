@@ -1,0 +1,222 @@
+@startuml AI and Game Engine Interaction
+
+title How AI Works with Game Engine - Hearts Card Game
+
+actor "Human/Test" as User
+participant "Game" as Game
+participant "CardGameState\n(HeartsGameState)" as State
+participant "Player" as Player
+participant "Algorithm\n(base class)" as Algorithm
+participant "iiMonteCarlo\n(Imperfect Info)" as IIMC
+participant "iiGameState\n(Belief State)" as IIState
+participant "UCT\n(MCTS)" as UCT
+participant "Trick" as Trick
+
+== Initialization ==
+
+User -> Game: new Game(HeartsGameState)
+Game -> State: create game state
+User -> Game: addPlayer(Player with Algorithm)
+Game -> Player: setGameState(state)
+Player -> Algorithm: store reference
+
+note over Player, Algorithm
+Player wraps an Algorithm (UCT, iiMonteCarlo, etc.)
+Algorithm performs the actual search/decision making
+end note
+
+== Game Loop (One Move) ==
+
+Game -> Game: doOnePlay()
+
+Game -> State: getNextPlayer()
+State --> Game: current Player
+
+Game -> Player: Play()
+
+note over Player, Algorithm
+Player delegates to its Algorithm
+to choose the best move
+end note
+
+Player -> Algorithm: resetCounters(gameState)
+Player -> Algorithm: Play(gameState, player)
+
+alt Algorithm is iiMonteCarlo (Imperfect Information)
+    
+    Algorithm -> IIMC: Play(gameState, player)
+    
+    note over IIMC
+    iiMonteCarlo handles uncertainty by:
+    1. Generate N possible worlds (belief states)
+    2. Run UCT on each world
+    3. Combine results
+    end note
+    
+    == Generate Possible Worlds ==
+    
+    loop for each model (30 times)
+        IIMC -> State: getiiGameState(consistent=true, who=me)
+        State -> IIState: new iiGameState
+        
+        note over IIState
+        Creates a "belief state" - one possible
+        configuration of hidden cards based on:
+        - Known cards (your hand, played cards)
+        - Card probabilities (opponent modeling)
+        - Void tracking (who can't have what suit)
+        end note
+        
+        IIState -> IIState: Sample hidden cards\nfrom probability distribution
+        IIState -> IIState: Create consistent world
+        State <-- IIState: complete game state with\nsampled opponent hands
+        IIMC <-- State: iiGameState (world model)
+    end
+    
+    == Run UCT on Each World ==
+    
+    loop for each world model
+        IIMC -> UCT: Play(worldState, player)
+        
+        UCT -> UCT: Build search tree
+        
+        loop 333 simulations
+            UCT -> UCT: Selection (UCB1)
+            
+            note over UCT
+            Navigate tree using:
+            UCB = reward + C*sqrt(log(N_parent)/N_child)
+            end note
+            
+            UCT -> UCT: Expansion
+            UCT -> State: ApplyMove(selected move)
+            
+            UCT -> UCT: Simulation (playout)
+            
+            loop until game end
+                UCT -> State: getRandomMove()
+                State --> UCT: random legal move
+                UCT -> State: ApplyMove(random move)
+            end
+            
+            UCT -> State: score(player)
+            State --> UCT: game result
+            
+            UCT -> UCT: Backpropagation
+            
+            note over UCT
+            Update all nodes in path:
+            - count++
+            - reward += result
+            end note
+            
+            loop undo all moves
+                UCT -> State: UndoMove(move)
+            end
+        end
+        
+        UCT -> UCT: Select best root child
+        UCT --> IIMC: returnValue(best move, eval)
+    end
+    
+    == Combine Results ==
+    
+    IIMC -> IIMC: Combine(all world results,\nworld probabilities)
+    
+    note over IIMC
+    Aggregate results across all worlds:
+    - Weight by world probability
+    - Use decision rule (max avg, min-max, etc.)
+    - Choose move that's best on average
+    end note
+    
+    IIMC --> Algorithm: returnValue(final best move)
+    
+else Algorithm is UCT (Perfect Information)
+    
+    Algorithm -> UCT: Play(gameState, player)
+    
+    loop iterations (increasing depth)
+        UCT -> UCT: setupNextIteration()
+        
+        loop samples (e.g., 10000)
+            UCT -> UCT: PlayUCTTree(state, root)
+            
+            note over UCT: Selection, Expansion, Simulation,\nBackpropagation (same as above)
+            
+        end
+        
+        UCT -> UCT: Check time/node limits
+    end
+    
+    UCT -> UCT: Select best move from root
+    UCT --> Algorithm: returnValue(best move)
+    
+end
+
+Algorithm --> Player: returnValue(chosen move)
+
+Player -> Player: Extract Move from returnValue
+Player --> Game: Move
+
+== Apply Move to Game State ==
+
+Game -> State: ApplyMove(move)
+State -> Trick: AddCard(card, player)
+Trick -> Trick: Update winning card
+
+State -> State: Update card decks\n- Remove from player hand\n- Add to played cards
+
+alt Trick complete?
+    State -> Trick: Winner()
+    Trick --> State: winning player
+    State -> State: Award cards to winner\nAdvance to next trick
+end
+
+State -> State: currPlr = next player
+
+== Notify All Players ==
+
+loop for each player
+    Game -> Player: Played(who, move)
+    
+    note over Player
+    Player can update beliefs:
+    - Track played cards
+    - Update void information
+    - Adjust probabilities
+    end note
+    
+    alt Player uses iiGameState
+        Player -> IIState: UpdateProbabilities(who, card)
+        
+        note over IIState
+        Update belief state:
+        - Mark card as played
+        - If didn't follow suit → void
+        - Adjust remaining probabilities
+        end note
+    end
+end
+
+Game -> Game: Print game state
+
+== Game State Updates (Within Algorithm) ==
+
+note over State, IIState
+**Key State Management:**
+
+CardGameState (Physical state):
+- cards[player] = current hand
+- played[player] = cards played
+- taken[player] = tricks won
+- allplayed = all cards seen
+
+iiGameState (Belief state):
+- prob[player][card] = probability
+- void[player][suit] = can't have suit
+- handSize[player] = cards remaining
+- Generate consistent worlds from beliefs
+end note
+
+@enduml

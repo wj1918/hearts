@@ -736,6 +736,174 @@ TEST(statistics_collection)
 }
 
 // ============================================================================
+// 11. AI DECISION TESTS - Specific scenarios
+// ============================================================================
+
+/**
+ * Test: AI should duck to avoid taking Queen of Spades
+ *
+ * Scenario:
+ * - Current trick: P1 leads 7D, P2 plays QS (slough), P3 plays 6S (slough)
+ * - Player 0 has 5D and KD as only diamonds
+ * - If P0 plays 5D: P1 wins with 7D, takes QS (13 pts)
+ * - If P0 plays KD: P0 wins with KD, takes QS (13 pts) - BAD!
+ *
+ * The AI should choose 5D to duck and avoid the QS penalty.
+ * This test verifies kQueenPenalty is properly considered.
+ */
+TEST(ai_avoids_queen_of_spades)
+{
+    srand(42);
+    HeartsGameState *g = new HeartsGameState(42);
+    HeartsCardGame game(g);
+
+    // Create AI player with enough simulations for reliable decision
+    UCT *uct = new UCT(500, 0.4);  // 500 samples per world
+    HeartsPlayout *playout = new HeartsPlayout();
+    uct->setPlayoutModule(playout);
+    uct->setEpsilonPlayout(0.1);  // Low epsilon for more deterministic playouts
+
+    iiMonteCarlo *iimc = new iiMonteCarlo(uct, 20);  // 20 world models
+    SafeSimpleHeartsPlayer *aiPlayer = new SafeSimpleHeartsPlayer(iimc);
+    aiPlayer->setModelLevel(1);
+
+    // Add players
+    game.addPlayer(aiPlayer);
+    game.addPlayer(new HeartsDucker());
+    game.addPlayer(new HeartsDucker());
+    game.addPlayer(new HeartsDucker());
+
+    // Reset and set up rules WITH queen penalty
+    g->Reset();
+    int rules = kQueenPenalty | kLead2Clubs | kNoHeartsFirstTrick |
+                kNoQueenFirstTrick | kQueenBreaksHearts | kMustBreakHearts;
+    g->setRules(rules);
+    g->setPassDir(kHold);
+
+    // Clear all hands - we'll set up a specific scenario
+    for (int p = 0; p < 4; p++) {
+        g->cards[p].reset();
+        g->original[p].reset();
+    }
+
+    // Set up Player 0's hand: QH, 7H, 5D, 9H, KD, JH
+    // Key: only 5D and KD are diamonds
+    g->cards[0].set(Deck::getcard(HEARTS, QUEEN));
+    g->cards[0].set(Deck::getcard(HEARTS, SEVEN));
+    g->cards[0].set(Deck::getcard(DIAMONDS, FIVE));
+    g->cards[0].set(Deck::getcard(HEARTS, NINE));
+    g->cards[0].set(Deck::getcard(DIAMONDS, KING));
+    g->cards[0].set(Deck::getcard(HEARTS, JACK));
+    g->original[0] = g->cards[0];
+
+    // Give other players some cards (they need cards for the game state to be valid)
+    // P1, P2, P3 each get 6 cards
+    g->cards[1].set(Deck::getcard(CLUBS, ACE));
+    g->cards[1].set(Deck::getcard(CLUBS, KING));
+    g->cards[1].set(Deck::getcard(CLUBS, TEN));
+    g->cards[1].set(Deck::getcard(SPADES, ACE));
+    g->cards[1].set(Deck::getcard(SPADES, TEN));
+    g->cards[1].set(Deck::getcard(DIAMONDS, ACE));
+    g->original[1] = g->cards[1];
+
+    g->cards[2].set(Deck::getcard(CLUBS, QUEEN));
+    g->cards[2].set(Deck::getcard(CLUBS, JACK));
+    g->cards[2].set(Deck::getcard(CLUBS, NINE));
+    g->cards[2].set(Deck::getcard(SPADES, KING));
+    g->cards[2].set(Deck::getcard(SPADES, NINE));
+    g->cards[2].set(Deck::getcard(DIAMONDS, TEN));
+    g->original[2] = g->cards[2];
+
+    g->cards[3].set(Deck::getcard(CLUBS, EIGHT));
+    g->cards[3].set(Deck::getcard(CLUBS, SEVEN));
+    g->cards[3].set(Deck::getcard(CLUBS, SIX));
+    g->cards[3].set(Deck::getcard(SPADES, EIGHT));
+    g->cards[3].set(Deck::getcard(SPADES, SEVEN));
+    g->cards[3].set(Deck::getcard(DIAMONDS, EIGHT));
+    g->original[3] = g->cards[3];
+
+    // Set up current trick: P1 leads 7D, P2 plays QS, P3 plays 6S
+    // Use trick 0 to keep the iiGameState initialization simple
+    g->currTrick = 0;
+
+    // Add cards directly to the current trick
+    g->t[0].reset(4, HEARTS);
+    g->t[0].AddCard(Deck::getcard(DIAMONDS, SEVEN), 1);  // P1 leads 7D
+    g->t[0].AddCard(Deck::getcard(SPADES, QUEEN), 2);    // P2 sloughs QS
+    g->t[0].AddCard(Deck::getcard(SPADES, SIX), 3);      // P3 sloughs 6S
+
+    // Mark these cards as played
+    g->allplayed.set(Deck::getcard(DIAMONDS, SEVEN));
+    g->allplayed.set(Deck::getcard(SPADES, QUEEN));
+    g->allplayed.set(Deck::getcard(SPADES, SIX));
+
+    // Set current player to P0 (it's their turn to complete the trick)
+    g->currPlr = 0;
+    g->setFirstPlayer(1);  // P1 was the lead player
+
+    // Now it's P0's turn. Must follow diamonds: 5D or KD
+    ASSERT_EQ(g->currPlr, 0);
+
+    // Get legal moves - should be exactly 5D and KD
+    Move *moves = g->getMoves();
+    int moveCount = 0;
+    bool has5D = false, hasKD = false;
+    card card5D = Deck::getcard(DIAMONDS, FIVE);
+    card cardKD = Deck::getcard(DIAMONDS, KING);
+
+    for (Move *m = moves; m; m = m->next) {
+        CardMove *cm = (CardMove *)m;
+        if (cm->c == card5D) has5D = true;
+        if (cm->c == cardKD) hasKD = true;
+        moveCount++;
+    }
+    g->freeMove(moves);
+
+    ASSERT_EQ(moveCount, 2);
+    ASSERT_TRUE(has5D);
+    ASSERT_TRUE(hasKD);
+
+    // Run AI to choose a move
+    Move *chosenMove = aiPlayer->Play();
+    ASSERT_NE(chosenMove, nullptr);
+
+    CardMove *chosenCardMove = (CardMove *)chosenMove;
+    card chosenCard = chosenCardMove->c;
+
+    // AI should choose 5D to duck and avoid taking QS
+    // 5D loses to 7D, so P1 takes the trick (and QS penalty)
+    // KD beats 7D, so P0 would take the trick (and 13 pts from QS)
+    std::cout << "(AI chose: " << (chosenCard == card5D ? "5D" : "KD") << ") ";
+
+    ASSERT_EQ(chosenCard, card5D);
+
+    // Note: game cleanup is handled by HeartsCardGame destructor
+}
+
+/**
+ * Test: Verify kQueenPenalty flag affects scoring
+ */
+TEST(queen_penalty_affects_score)
+{
+    HeartsGameState g(123);
+
+    // Set rules WITH queen penalty
+    g.setRules(kQueenPenalty);
+
+    // Give player 0 the QS in their taken pile
+    g.taken[0].set(Deck::getcard(SPADES, QUEEN));
+
+    // Score should be 13
+    ASSERT_EQ(g.score(0), 13.0);
+
+    // Now test WITHOUT queen penalty
+    g.setRules(0);  // No flags
+
+    // Score should be 0 (QS not penalized)
+    ASSERT_EQ(g.score(0), 0.0);
+}
+
+// ============================================================================
 // MAIN TEST RUNNER
 // ============================================================================
 
@@ -811,6 +979,12 @@ int main(int argc, char **argv)
     // 10. Statistics tests
     std::cout << "--- Statistics Tests ---" << std::endl;
     RUN_TEST(statistics_collection);
+    std::cout << std::endl;
+
+    // 11. AI decision tests
+    std::cout << "--- AI Decision Tests ---" << std::endl;
+    RUN_TEST(queen_penalty_affects_score);
+    RUN_TEST(ai_avoids_queen_of_spades);
     std::cout << std::endl;
 
     // Summary

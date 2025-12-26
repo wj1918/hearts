@@ -1,0 +1,135 @@
+@startuml Play One Trick in Hearts
+
+title Play One Trick - Hearts Card Game
+
+actor "Player 1" as P1
+actor "Player 2" as P2
+actor "Player 3" as P3
+actor "Player 4" as P4
+participant "Game" as Game
+participant "CardGameState" as State
+participant "Trick" as Trick
+
+note over Game: Trick starts with curr=0
+
+== Player 1 Leads ==
+Game -> State: getNextPlayer()
+State --> Game: Player 1 (currPlr)
+
+Game -> P1: Play()
+P1 -> P1: Select legal card
+P1 --> Game: CardMove (card, player)
+
+Game -> State: ApplyMove(move)
+State -> Trick: AddCard(card, player=0)
+Trick -> Trick: track winning card
+State -> State: cards[0].clear(card)
+State -> State: played[0].set(card)
+State -> State: currPlr = (0+1) % 4 = 1
+State -> Trick: Done() ?
+Trick --> State: false (curr=1)
+
+loop Notify all players
+    Game -> P1: Played(who=0, move)
+    Game -> P2: Played(who=0, move)
+    Game -> P3: Played(who=0, move)
+    Game -> P4: Played(who=0, move)
+end
+
+== Player 2 Follows ==
+Game -> State: getNextPlayer()
+State --> Game: Player 2
+
+Game -> P2: Play()
+P2 -> P2: Select legal card\n(must follow suit if possible)
+P2 --> Game: CardMove (card, player)
+
+Game -> State: ApplyMove(move)
+State -> Trick: AddCard(card, player=1)
+Trick -> Trick: update winning card\n(if higher than current)
+State -> State: cards[1].clear(card)
+State -> State: played[1].set(card)
+State -> State: allplayed.set(card or previous winner)
+State -> State: currPlr = (1+1) % 4 = 2
+State -> Trick: Done() ?
+Trick --> State: false (curr=2)
+
+loop Notify all players
+    Game -> P1: Played(who=1, move)
+    Game -> P2: Played(who=1, move)
+    Game -> P3: Played(who=1, move)
+    Game -> P4: Played(who=1, move)
+end
+
+== Player 3 Follows ==
+Game -> State: getNextPlayer()
+State --> Game: Player 3
+
+Game -> P3: Play()
+P3 -> P3: Select legal card
+P3 --> Game: CardMove (card, player)
+
+Game -> State: ApplyMove(move)
+State -> Trick: AddCard(card, player=2)
+Trick -> Trick: update winning card
+State -> State: cards[2].clear(card)
+State -> State: played[2].set(card)
+State -> State: allplayed.set(card or previous winner)
+State -> State: currPlr = (2+1) % 4 = 3
+State -> Trick: Done() ?
+Trick --> State: false (curr=3)
+
+loop Notify all players
+    Game -> P1: Played(who=2, move)
+    Game -> P2: Played(who=2, move)
+    Game -> P3: Played(who=2, move)
+    Game -> P4: Played(who=2, move)
+end
+
+== Player 4 Completes Trick ==
+Game -> State: getNextPlayer()
+State --> Game: Player 4
+
+Game -> P4: Play()
+P4 -> P4: Select legal card
+P4 --> Game: CardMove (card, player)
+
+Game -> State: ApplyMove(move)
+State -> Trick: AddCard(card, player=3)
+Trick -> Trick: update winning card
+State -> State: cards[3].clear(card)
+State -> State: played[3].set(card)
+State -> State: allplayed.set(card or previous winner)
+State -> Trick: Done() ?
+Trick --> State: **true (curr=4, all played)**
+
+note over State: Trick is complete!
+
+State -> Trick: Winner()
+Trick --> State: winning player (e.g., Player 2)
+
+State -> Trick: WinningCard()
+Trick --> State: winning card
+
+State -> State: allplayed.set(winning card)
+
+loop Award all 4 cards to winner
+    State -> State: taken[winner].set(play[0])
+    State -> State: taken[winner].set(play[1])
+    State -> State: taken[winner].set(play[2])
+    State -> State: taken[winner].set(play[3])
+end
+
+State -> State: currTrick++
+State -> State: currPlr = winner
+
+loop Notify all players
+    Game -> P1: Played(who=3, move)
+    Game -> P2: Played(who=3, move)
+    Game -> P3: Played(who=3, move)
+    Game -> P4: Played(who=3, move)
+end
+
+note over Game,Trick: Trick complete!\nWinner leads next trick
+
+@enduml
