@@ -165,6 +165,7 @@ With threading, worlds can be evaluated in parallel for faster decisions.
 
 - [ANALYSIS.md](ANALYSIS.md) - Complete codebase architecture
 - [AI_ALGORITHMS.md](AI_ALGORITHMS.md) - Detailed algorithm explanation
+- [AI_STRENGTH.md](AI_STRENGTH.md) - AI player strength assessment
 - [server/API_SPEC.md](server/API_SPEC.md) - REST API specification
 
 ---

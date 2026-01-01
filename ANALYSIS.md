@@ -278,6 +278,7 @@ See `server/API_SPEC.md` for complete documentation.
 
 - [AI_ALGORITHMS.md](AI_ALGORITHMS.md) - Detailed AI algorithm explanation
 - [WORLD_MODELS.md](WORLD_MODELS.md) - Imperfect information handling
+- [AI_STRENGTH.md](AI_STRENGTH.md) - AI player strength assessment
 - [server/API_SPEC.md](server/API_SPEC.md) - REST API specification
 - [Readme.txt](Readme.txt) - Build instructions
 
