@@ -2,7 +2,7 @@
 
 ## Overview
 
-A sophisticated C++ implementation of Hearts card game with advanced AI using **Monte Carlo Tree Search (MCTS)** and **Imperfect Information handling**.
+A sophisticated C++ implementation of Hearts card game with advanced AI using **Monte Carlo Tree Search (MCTS)** and **Imperfect Information handling**. Originally created by Nathan Sturtevant (University of Alberta/University of Denver).
 
 ---
 
@@ -22,7 +22,10 @@ A sophisticated C++ implementation of Hearts card game with advanced AI using **
 │  ├── GlobalHearts     │  ├── simpleIIHeartsState (OM-1) │
 │  └── SafeSimpleHearts │  └── advancedIIHeartsState(OM-2)│
 ├─────────────────────────────────────────────────────────┤
-│  Utilities: hash, mt_random, statistics, Timer          │
+│  REST API Server      │  Utilities                      │
+│  ├── HeartsAIServer   │  ├── hash, mt_random            │
+│  ├── JsonProtocol     │  ├── statistics, Timer          │
+│  └── AIRequestHandler │  └── CardProbabilityData        │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -77,11 +80,13 @@ Player (abstract)
 
 | Metric | Value |
 |--------|-------|
-| Source files | ~20 .cpp/.h |
-| Lines of code | ~8,000+ |
-| Main classes | ~25 |
+| Source files | 50 .cpp/.h |
+| Lines of code | ~14,700 |
+| Main classes | ~30 |
 | AI algorithms | 2 (UCT, iiMonteCarlo) |
 | Opponent models | 3 (OM-0, OM-1, OM-2) |
+| Test suite | ~900 lines |
+| REST API server | Full HTTP/JSON support |
 
 ---
 
@@ -122,15 +127,45 @@ Player (abstract)
 
 ## File Summary
 
+### Core Game Engine
 | File | Purpose |
 |------|---------|
-| `Hearts.cpp` | Game rules, scoring, card passing |
-| `UCT.cpp` | Monte Carlo Tree Search |
-| `iiMonteCarlo.cpp` | Imperfect information wrapper |
-| `iiGameState.cpp` | Belief state / opponent modeling |
-| `CardGameState.cpp` | Card game framework |
-| `Player.cpp` | AI player implementations |
-| `main.cpp` | Entry point, game loop |
+| `Hearts.cpp/h` | Game rules, scoring, card passing, player types |
+| `CardGameState.cpp/h` | Card game framework with Deck class |
+| `GameState.cpp/h` | Abstract game state base |
+| `Game.cpp/h` | Game orchestration |
+
+### AI Algorithms
+| File | Purpose |
+|------|---------|
+| `UCT.cpp/h` | Monte Carlo Tree Search algorithm |
+| `iiMonteCarlo.cpp/h` | Imperfect information wrapper |
+| `Algorithm.cpp/h` | Algorithm base class |
+| `iiGameState.cpp/h` | Belief state / opponent modeling (OM-0, OM-1, OM-2) |
+
+### REST API Server
+| File | Purpose |
+|------|---------|
+| `server/HeartsAIServer.cpp/h` | HTTP server implementation |
+| `server/JsonProtocol.cpp/h` | JSON request/response handling |
+| `server/AIRequestHandler.cpp/h` | API endpoint handlers |
+| `server/ServerMain.cpp` | Server entry point |
+| `server/API_SPEC.md` | Complete API documentation |
+
+### Utilities & Testing
+| File | Purpose |
+|------|---------|
+| `tests.cpp` | Comprehensive test suite (~900 lines) |
+| `benchmark.cpp` | Performance benchmarks |
+| `statistics.cpp/h` | Game statistics collection |
+| `mt_random.cpp/h` | Mersenne Twister RNG |
+| `hash.cpp/h` | Hash table implementation |
+| `Timer.cpp/h` | Performance timing |
+
+### Entry Points
+| File | Purpose |
+|------|---------|
+| `main.cpp` | Main game simulator (100 AI games) |
 
 ---
 
@@ -174,6 +209,47 @@ cmake ..
 cmake --build . --config Release
 ```
 
+### Executables
+| Executable | Description |
+|------------|-------------|
+| `hearts` | Main game simulator (100 AI games) |
+| `hearts_tests` | Comprehensive test suite |
+| `hearts_benchmark` | Performance benchmark |
+| `hearts_server` | REST API server |
+
+### Server Usage
+```bash
+./hearts_server              # Start on port 8080
+./hearts_server 3000         # Custom port
+./hearts_server 8080 0.0.0.0 # Bind to all interfaces
+```
+
+---
+
+## REST API Server
+
+The project includes a production-quality HTTP REST API for remote AI queries.
+
+### Endpoints
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health` | GET | Health check |
+| `/api/move` | POST | Compute AI move with full configuration |
+| `/api/play-one` | POST | Simplified single-move endpoint |
+
+### Quick Test
+```bash
+# Health check
+curl http://localhost:8080/api/health
+
+# Get AI move
+curl -X POST http://localhost:8080/api/move \
+  -H "Content-Type: application/json" \
+  -d '{"game_state":{"player_hand":["2C","5C","AS"],...},"ai_config":{"simulations":1000}}'
+```
+
+See `server/API_SPEC.md` for complete documentation.
+
 ---
 
 ## Design Patterns Used
@@ -185,7 +261,26 @@ cmake --build . --config Release
 | **State** | Different GameState subclasses |
 | **Factory** | GetPlayer() creates configured players |
 | **Adapter** | UCTModule adapts algorithms to playout interface |
+| **Bridge** | iiMonteCarlo bridges imperfect info to deterministic UCT |
 
 ---
 
-*Analysis generated: December 2024*
+## Third-Party Libraries
+
+| Library | File | Purpose |
+|---------|------|---------|
+| cpp-httplib | `third_party/httplib.h` | Single-header HTTP server |
+| nlohmann/json | `third_party/json.hpp` | JSON parsing/serialization |
+
+---
+
+## Related Documentation
+
+- [AI_ALGORITHMS.md](AI_ALGORITHMS.md) - Detailed AI algorithm explanation
+- [WORLD_MODELS.md](WORLD_MODELS.md) - Imperfect information handling
+- [server/API_SPEC.md](server/API_SPEC.md) - REST API specification
+- [Readme.txt](Readme.txt) - Build instructions
+
+---
+
+*Analysis generated: January 2026*

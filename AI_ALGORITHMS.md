@@ -436,3 +436,15 @@ iiMonteCarlo *ai = new iiMonteCarlo(
 ---
 
 *This technique is known as "Information Set Monte Carlo Tree Search" (ISMCTS) or "Determinization" in game AI research.*
+
+---
+
+## Related Documentation
+
+- [ANALYSIS.md](ANALYSIS.md) - Complete codebase architecture
+- [WORLD_MODELS.md](WORLD_MODELS.md) - Simplified world model explanation
+- [server/API_SPEC.md](server/API_SPEC.md) - REST API specification
+
+---
+
+*Updated: January 2026*

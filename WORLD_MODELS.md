@@ -158,3 +158,15 @@ With threading, worlds can be evaluated in parallel for faster decisions.
 ---
 
 *This technique is called "Determinization" or "Perfect Information Monte Carlo Sampling" in game AI literature.*
+
+---
+
+## Related Documentation
+
+- [ANALYSIS.md](ANALYSIS.md) - Complete codebase architecture
+- [AI_ALGORITHMS.md](AI_ALGORITHMS.md) - Detailed algorithm explanation
+- [server/API_SPEC.md](server/API_SPEC.md) - REST API specification
+
+---
+
+*Updated: January 2026*

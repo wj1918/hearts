@@ -435,3 +435,15 @@ iiMonteCarlo *ai = new iiMonteCarlo(
 ---
 
 *这种技术在游戏AI研究中被称为"信息集蒙特卡洛树搜索"(ISMCTS)或"确定化"。*
+
+---
+
+## 相关文档
+
+- [ANALYSIS.md](ANALYSIS.md) - 代码库完整架构分析（英文）
+- [世界模型详解.md](世界模型详解.md) - 世界模型简化说明
+- [server/API_SPEC.md](server/API_SPEC.md) - REST API规范
+
+---
+
+*更新时间：2026年1月*
