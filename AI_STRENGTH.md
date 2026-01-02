@@ -229,6 +229,7 @@ This is a **research-quality implementation** suitable for:
 - [ANALYSIS.md](ANALYSIS.md) - Codebase architecture
 - [AI_ALGORITHMS.md](AI_ALGORITHMS.md) - Algorithm details
 - [WORLD_MODELS.md](WORLD_MODELS.md) - Imperfect information handling
+- [SUIT_STRENGTH.md](SUIT_STRENGTH.md) - Proposed suit strength measurement system
 
 ---
 

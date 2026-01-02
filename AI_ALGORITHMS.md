@@ -444,6 +444,7 @@ iiMonteCarlo *ai = new iiMonteCarlo(
 - [ANALYSIS.md](ANALYSIS.md) - Complete codebase architecture
 - [WORLD_MODELS.md](WORLD_MODELS.md) - Simplified world model explanation
 - [AI_STRENGTH.md](AI_STRENGTH.md) - AI player strength assessment
+- [SUIT_STRENGTH.md](SUIT_STRENGTH.md) - Proposed suit strength measurement system
 - [server/API_SPEC.md](server/API_SPEC.md) - REST API specification
 
 ---
