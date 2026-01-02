@@ -181,6 +181,166 @@ When blocking a moon attempt:
 
 ---
 
+## Suit Control Index (SCI) - Collecting All 13 Cards
+
+### Mathematical Foundation
+
+To collect all 13 cards of a suit during play, you must **win every trick containing a card of that suit**.
+
+#### Initial Deal Probability
+
+The probability of being **dealt** all 13 cards of a suit:
+
+```
+P = C(13,13) × C(39,0) / C(52,13)
+P = 1 / 635,013,559,600
+P ≈ 1.57 × 10⁻¹²
+```
+
+This is essentially impossible (~1 in 635 billion).
+
+#### Trick Distribution
+
+| Factor | Value |
+|--------|-------|
+| Cards in suit S | 13 |
+| Tricks played | 13 |
+| Max cards of S per trick | 4 |
+| Min tricks with S | ⌈13/4⌉ = 4 |
+| Expected distribution | 3.25 cards per player |
+| Typical tricks with suit S | 7-10 |
+
+### SCI Formula
+
+The **Suit Control Index** measures ability to win tricks and capture all cards of a suit:
+
+```
+SCI = (H × w_h + M × w_m + L × w_l) / N
+```
+
+| Variable | Meaning | Cards | Weight |
+|----------|---------|-------|--------|
+| H | High cards held | A, K, Q, J | w_h = 3 |
+| M | Mid cards held | 10, 9, 8 | w_m = 2 |
+| L | Low cards held | 7, 6, 5, 4, 3, 2 | w_l = 1 |
+| N | Total cards held in suit | - | - |
+
+### SCI Calculation Examples
+
+**Hand 1**: A♠ K♠ Q♠ 10♠ 5♠ (5 spades)
+```
+SCI = (3×3 + 1×2 + 1×1) / 5 = 12/5 = 2.4
+```
+
+**Hand 2**: J♠ 9♠ 7♠ 4♠ 2♠ (5 spades)
+```
+SCI = (1×3 + 1×2 + 3×1) / 5 = 8/5 = 1.6
+```
+
+**Hand 3**: 8♠ 6♠ 4♠ 3♠ 2♠ (5 spades)
+```
+SCI = (0×3 + 1×2 + 4×1) / 5 = 6/5 = 1.2
+```
+
+### SCI Interpretation Scale
+
+| SCI Range | Control Level | Collect All 13? |
+|-----------|---------------|-----------------|
+| < 1.0 | Weak | Very unlikely |
+| 1.0 - 1.5 | Moderate | Unlikely |
+| 1.5 - 2.0 | Strong | Possible with luck |
+| 2.0 - 2.5 | Very Strong | Good chance |
+| > 2.5 | Dominant | High probability |
+
+### Position-Adjusted SCI
+
+Account for **card gaps** (missing cards above yours):
+
+```
+SCI_adj = SCI × (1 - G/13)
+```
+
+Where `G` = number of cards higher than your highest that you don't hold.
+
+**Example**: You hold K♠ Q♠ 10♠ (missing A♠)
+```
+Base SCI = (2×3 + 1×2) / 3 = 8/3 = 2.67
+G = 1 (the Ace)
+SCI_adj = 2.67 × (1 - 1/13) = 2.67 × 0.923 = 2.46
+```
+
+### Probability Model
+
+Let `p` = probability of winning a random trick ≈ 0.25 (baseline)
+
+For a strong hand with shooting potential, `p` ≈ 0.6-0.8
+
+If suit S appears in `t` tricks:
+```
+P(collect all S) ≈ p^t
+```
+
+| Tricks with S | p=0.25 | p=0.5 | p=0.75 |
+|---------------|--------|-------|--------|
+| 7 | 0.006% | 0.78% | 13.3% |
+| 8 | 0.0015% | 0.39% | 10.0% |
+| 9 | 0.0004% | 0.20% | 7.5% |
+
+### SCI to Success Rate Mapping
+
+Empirical relationship:
+
+```
+P(collect all) ≈ sigmoid(SCI - 1.8) × base_rate
+```
+
+Simplified lookup:
+
+| SCI | P(success) |
+|-----|------------|
+| 1.0 | ~2% |
+| 1.5 | ~8% |
+| 2.0 | ~20% |
+| 2.5 | ~40% |
+| 3.0 | ~65% |
+
+### Multi-Suit Aggregate Control
+
+For shooting the moon, calculate **aggregate control**:
+
+```
+Total_Control = Σ(SCI_suit × cards_in_suit) / 13
+```
+
+**Threshold**: Total_Control > 2.0 suggests viable moon shot.
+
+### Implementation Structure
+
+```cpp
+struct SuitControlIndex {
+    int suit;
+    double sci;              // Raw SCI value
+    double sci_adjusted;     // Position-adjusted SCI
+    int gaps;                // Missing high cards above top card
+    double collectProb;      // Estimated probability to collect all 13
+};
+
+double calculateSCI(const std::vector<Card>& suitCards) {
+    int H = 0, M = 0, L = 0;
+    for (const auto& card : suitCards) {
+        int rank = card.rank();
+        if (rank >= JACK) H++;      // A, K, Q, J
+        else if (rank >= 8) M++;    // 10, 9, 8
+        else L++;                    // 7, 6, 5, 4, 3, 2
+    }
+    int N = suitCards.size();
+    if (N == 0) return 0.0;
+    return (H * 3.0 + M * 2.0 + L * 1.0) / N;
+}
+```
+
+---
+
 ## Integration Points
 
 ### 1. Pass Card Selection
