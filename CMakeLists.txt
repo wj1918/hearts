@@ -57,6 +57,11 @@ add_executable(hearts_tests tests.cpp)
 target_link_libraries(hearts_tests PRIVATE hearts_lib)
 add_test(NAME hearts_tests COMMAND hearts_tests)
 
+# Queen of Spades test suite
+add_executable(queen_spade_tests queen_spade_tests.cpp)
+target_link_libraries(queen_spade_tests PRIVATE hearts_lib)
+add_test(NAME queen_spade_tests COMMAND queen_spade_tests)
+
 # Performance benchmark
 add_executable(hearts_benchmark benchmark.cpp)
 target_link_libraries(hearts_benchmark PRIVATE hearts_lib)

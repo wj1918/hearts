@@ -179,6 +179,168 @@ When blocking a moon attempt:
 | Can win trick with hearts | Take it | +40 |
 | Leading, shooter void in suit | Lead that suit | +30 |
 
+
+---
+
+# Suit Control Index (SCI) in Card Games
+## Concept, Interpretation, Formulas, Pseudo-code, and Worked Example
+
+---
+
+## 1. Definition
+
+**Suit Control Index (SCI)** measures how much control a player has over a single suit during its full lifecycle (all 13 cards).
+
+> SCI estimates the **expected number of tricks a player can control** if the suit is played to exhaustion.
+
+---
+
+## 2. Mathematical Formulation
+
+Let:
+- S be a suit
+- C = {c₁, c₂, …, cₙ} be the player’s cards in suit S
+- R be the set of remaining unseen cards in suit S
+- W(cᵢ) be the probability that card cᵢ eventually wins a trick
+
+\[
+SCI(S) = \sum_{i=1}^{n} W(c_i)
+\]
+
+---
+
+## 3. Fast Heuristic for Win Probability
+
+Let:
+- H = number of higher-ranked unseen cards than c
+- U = total unseen cards remaining in the suit (excluding c)
+
+\[
+W(c) \approx \max\left(0, 1 - \frac{H}{U}\right)
+\]
+
+---
+
+## 4. Worked Numeric Example (Step-by-Step)
+
+### Game State
+- Suit: **Spades**
+- Your hand: **A, 9, 6**
+- Cards already played in spades: **K, Q, J, 10**
+- Remaining unseen spades: **8 cards**
+
+Remaining unseen ranks:
+```
+2, 3, 4, 5, 7, 8, 10?, J?  (example abstraction)
+```
+(Exact distribution unknown; only rank counts matter.)
+
+---
+
+### Step 1: Evaluate ♠A
+
+- Higher unseen cards than A: **0**
+- Unseen cards U = 8
+
+\[
+W(A) = 1 - 0/8 = 1.00
+\]
+
+Ace is guaranteed to win **1 trick**.
+
+---
+
+### Step 2: Evaluate ♠9
+
+- Higher unseen cards: 10, J, Q, K, A → already played  
+- Remaining higher unseen than 9: **2** (e.g., 10, J not yet exhausted)
+- Unseen cards U = 7
+
+\[
+W(9) = 1 - 2/7 \approx 0.71
+\]
+
+♠9 has a **71% chance** to win a late trick.
+
+---
+
+### Step 3: Evaluate ♠6
+
+- Higher unseen cards: 7, 8, 9, 10, J, Q, K, A  
+- Remaining higher unseen: **6**
+- Unseen cards U = 6
+
+\[
+W(6) = 1 - 6/6 = 0
+\]
+
+♠6 is unlikely to ever win a trick.
+
+---
+
+### Step 4: Compute SCI
+
+\[
+SCI = W(A) + W(9) + W(6)
+\]
+
+\[
+SCI = 1.00 + 0.71 + 0.00 = 1.71
+\]
+
+---
+
+### Interpretation
+
+- You can expect to **control about 1.7 tricks** in spades
+- Ace gives guaranteed control
+- 9 provides **timing / exhaustion leverage**
+- 6 is effectively a losing card
+
+---
+
+## 5. Pseudo-code Implementation
+
+```pseudo
+function compute_SCI(hand, suit, unseen_cards):
+    SCI = 0.0
+
+    for card in hand[suit]:
+        higher = count_higher_unseen(card, unseen_cards[suit])
+        U = total_unseen(suit) - 1
+        win_prob = max(0, 1 - (higher / U))
+        SCI += win_prob
+
+    return SCI
+```
+
+---
+
+## 6. Practical Insight
+
+This example explains why:
+- **A + mid-card** is often stronger than it looks
+- Long suits gain value late
+- SCI reflects *timing*, not just raw power
+
+---
+
+## 7. References
+
+- Trick-taking games overview  
+  https://www.pagat.com/class/trick.html
+
+- Suit establishment (Bridge)  
+  https://www.bridgebum.com/suit_establishment.php
+
+- Hand evaluation principles  
+  https://www.acbl.org/learn_page/how-to-evaluate-a-bridge-hand/
+
+---
+
+*Document intended for analytical, strategic, and AI research use.*
+
+
 ---
 
 ## Suit Control Index (SCI) - Collecting All 13 Cards
