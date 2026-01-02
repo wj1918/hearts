@@ -76,6 +76,90 @@ Based on the research literature:
 
 ---
 
+## Missing Skills vs Human Experts
+
+Skills that expert human players have that this AI currently lacks:
+
+### Strategic Skills
+
+| Skill | AI | Expert | Gap |
+|-------|:--:|:------:|-----|
+| Dump Q♠ when void | ✅ | ✅ | None |
+| Avoid taking points | ✅ | ✅ | None |
+| Flush Q♠ actively (lead A♠/K♠) | ❌ | ✅ | **Major** |
+| Stop moon shoot attempts | ⚠️ | ✅ | Moderate |
+| Card counting | ⚠️ | ✅ | Moderate |
+| Score-aware strategy | ⚠️ | ✅ | Moderate |
+| Void creation planning | ❌ | ✅ | **Major** |
+| Adapt to opponents | ❌ | ✅ | **Major** |
+| Endgame calculation | ⚠️ | ✅ | Minor |
+| Multi-trick planning | ❌ | ✅ | **Major** |
+
+### Detailed Analysis
+
+1. **Aggressive Queen Flushing**
+   - Experts lead A♠/K♠ to flush Q♠ when they have spade length
+   - AI avoids leading high spades (defensive only)
+
+2. **Shooting the Moon Detection/Prevention**
+   - Experts recognize when opponent is collecting all hearts
+   - Experts will take a heart to stop a shoot attempt
+   - AI has basic shoot detection but limited prevention strategy
+
+3. **Card Counting Precision**
+   - Experts track exactly which cards remain in each suit
+   - AI uses probabilistic modeling (OM-2) but not perfect tracking
+
+4. **Partner-like Cooperation**
+   - Experts sometimes "help" another player avoid points
+   - AI plays purely selfishly (no temporary alliances)
+
+5. **Meta-Game Adaptation**
+   - Experts adjust strategy based on opponent tendencies
+   - AI uses same strategy every game (no learning)
+
+6. **Score-Aware Strategy**
+   - Experts play differently when leading/trailing
+   - Experts take risks when behind, play safe when ahead
+   - AI has limited game-score awareness
+
+7. **Void Creation Strategy**
+   - Experts plan which suits to void during passing
+   - AI passes dangerous cards but doesn't plan void creation
+
+8. **Endgame Precision**
+   - Experts calculate exact card distributions in last tricks
+   - AI still uses Monte Carlo sampling (unnecessary uncertainty)
+
+9. **Bait & Trap Plays**
+   - Experts lead low to bait out high cards
+   - AI doesn't set up multi-trick traps
+
+10. **Pass Direction Strategy**
+    - Experts adjust passing based on pass direction
+    - Pass left: dangerous cards go to next player
+    - Pass right: receive from aggressive player
+    - AI has basic passing logic only
+
+11. **Reading Opponent Voids**
+    - Experts remember who showed void and exploit it
+    - AI tracks voids (OM-1/OM-2) but doesn't exploit aggressively
+
+12. **Timing of Heart Break**
+    - Experts choose optimal moment to break hearts
+    - AI breaks hearts opportunistically, not strategically
+
+### Priority Improvements
+
+If enhancing the AI, these would have highest impact:
+
+1. **Queen Flushing** - Lead A♠/K♠ when holding spade length without Q♠
+2. **Void Planning** - Strategic passing to create useful voids
+3. **Score Awareness** - Adjust risk based on game score
+4. **Moon Prevention** - Actively stop shoot attempts
+
+---
+
 ## Research Context
 
 This implementation is based on techniques that have achieved **expert-level play** in similar games:
